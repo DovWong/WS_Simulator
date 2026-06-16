@@ -1,6 +1,7 @@
-const React={useState:()=>[null,()=>{}],useEffect:()=>{},useReducer:()=>[null,()=>{}],useRef:()=>({current:null}),useMemo:(f)=>f(),useCallback:(f)=>f,createElement:()=>null,Fragment:'Fragment'};
+﻿const React={useState:()=>[null,()=>{}],useEffect:()=>{},useReducer:()=>[null,()=>{}],useRef:()=>({current:null}),useMemo:(f)=>f(),useCallback:(f)=>f,createElement:()=>null,Fragment:'Fragment'};
 const localStorage={_d:{},getItem(k){return this._d[k]||null;},setItem(k,v){this._d[k]=v;},removeItem(k){delete this._d[k];}};
 const btoa=s=>Buffer.from(s,'binary').toString('base64'); const atob=s=>Buffer.from(s,'base64').toString('binary');
+
 
 /* ============================================================
    WS 對戰模擬器 — 規則引擎原型
@@ -841,14 +842,7 @@ function calcSoul(state, pIdx, slot) {
    Reducer：所有遊戲動作集中在這
    ============================================================ */
 function gameReducer(state, action) {
-  let s = gameReducerInner(state, action);
-  // 統一收口：任何動作後若有角色力量降至 0 以下，立即破壞（規則處理）。
-  // 僅在沒有 pending（不打斷互動流程）且處於對戰階段時檢查。
-  const battlePhase = s && (s.phase === 'main' || s.phase === 'climax' || s.phase === 'attack' || s.phase === 'encore');
-  if (s && !s.pending && battlePhase && s.players) {
-    s = checkZeroPowerDestroy(s);
-  }
-  return s;
+  return gameReducerInner(state, action);
 }
 function gameReducerInner(state, action) {
   const s = structuredCloneState(state);
@@ -1884,6 +1878,7 @@ function runAttackFx(s, ctx) {
         s.log.push(`🟣 ${attacker.def.name}：對手前列全部當回合 -2500。`);
       }
       pushReveal(top, success, '對手前列全部 −2500');
+      if (success) s = checkZeroPowerDestroy(s);
     }
   }
   // 椛：攻擊時自己 +（其他我方幻想郷角色數 × 1000）
@@ -1935,6 +1930,13 @@ function checkZeroPowerDestroy(s) {
       s.players[pIdx].stage[i].state = 'reverse';
       s.players[pIdx].stage[i].zeroDestroying = true;
       s.log.push(`💥 ${P.stage[i].def.name} 力量降至 0 以下，被破壞。`);
+      // 若攻擊或防守角色被破壞，依規則 7.6.1.3 戰鬥不發生
+      if (s.attackCtx) {
+        const _ctx = s.attackCtx;
+        if ((pIdx === _ctx.aPIdx && i === _ctx.slot) || (pIdx === _ctx.dPIdx && i === _ctx.dslot)) {
+          _ctx.battleVoided = true;
+        }
+      }
     });
     if (isHuman(s, pIdx)) {
       const cost = encoreCost(s, pIdx);
@@ -2029,6 +2031,7 @@ function attackAfterConfirm(s) {
     ctx.mode = 'direct';
     s.log.push(`⚔️ ${aP.name} 用 ${attacker.def.name} 直接攻擊。`);
     s = runAttackFx(s, ctx);
+    if (s.pending) { ctx.resumeAfterPending = 'burn'; return s; }
     return attackBurnStep(s);
   }
   // 有防守者：真人選正/側打；NPC 智能選
@@ -2056,6 +2059,7 @@ function attackAfterConfirm(s) {
   } // 都不理想，預設正打
   s.log.push(`⚔️ ${aP.name} 用 ${attacker.def.name} ${ctx.mode === 'side' ? '側面攻擊' : '正面攻擊'}。`);
   s = runAttackFx(s, ctx);
+  if (s.pending) { ctx.resumeAfterPending = 'burn'; return s; }
   return attackBurnStep(s);
 }
 
@@ -2263,12 +2267,16 @@ function attackBattleStep(s) {
   const attacker = aP.stage[ctx.slot];
   // 側面/直接不戰鬥
   if (ctx.mode === 'front') {
+    // 攻擊或防守角色已被破壞（規則 7.6.1.3）→ 戰鬥不發生
+    if (ctx.battleVoided) {
+      s.log.push('攻擊或防守角色已被破壞，戰鬥不發生（規則 7.6.1.3）。');
+      if (!s.pending) s.attackCtx = null;
+      return s;
+    }
     const defender = dP.stage[ctx.dslot];
-    // 戰鬥前：攻擊對象因力量≤0已被規則破壞 → 不發生戰鬥（counter step 已在前面跑過）。
-    // 由 checkZeroPowerDestroy（reducer 收口）負責落控室/encore；這裡只記錄並跳過戰鬥。
+    // 安全網：力量仍≤0（非 battleVoided 路徑）→ 同樣跳過
     if (attacker && defender && calcPower(s, ctx.dPIdx, ctx.dslot) <= 0) {
-      s.log.push(`${defender.def.name} 戰鬥前力量已降至 0 以下，直接被破壞，戰鬥不發生。`);
-      // 不進行 aPow vs dPow，攻擊者不倒置對象、也不被反殺
+      s.log.push(`${defender.def.name} 戰鬥前力量已降至 0 以下，戰鬥不發生。`);
       if (!s.pending) s.attackCtx = null;
       return s;
     }
@@ -3607,6 +3615,7 @@ function resolvePending(s, choice) {
         ctx.mode = choice.side ? 'side' : 'front';
         s.log.push(`⚔️ ${aP.name} 用 ${attacker.def.name} ${ctx.mode === 'side' ? '側面攻擊' : '正面攻擊'}。`);
         s = runAttackFx(s, ctx);
+        if (s.pending) { ctx.resumeAfterPending = 'burn'; return s; }
         return attackBurnStep(s);
       }
     case 'ATK_BURN_ASK':
@@ -3686,6 +3695,11 @@ function resolvePending(s, choice) {
       }
     default:
       break;
+  }
+  // 攻擊效果（如メディスン）零破壞 encore 結算後，接續 burn step
+  if (s.attackCtx && s.attackCtx.resumeAfterPending === 'burn' && !s.pending) {
+    s.attackCtx.resumeAfterPending = null;
+    return attackBurnStep(s);
   }
   // 攻擊流程：trigger 的門/閘 pending 結算後，接續 counter step
   if (s.attackCtx && s.attackCtx.resumeAfterPending === 'counter' && !s.pending) {
@@ -6077,6 +6091,6 @@ function SandboxPanel(props) {
       style: miniBtn('var(--panel)')
     }, zone === 'deck' ? '填滿' : '清'));
   })), cardPicker);
-}
-
-module.exports={DEFS,buildDeck,shuffle,initialState,gameReducer,activateConcentrate,resolvePending,checkLevelUp,dealBattleDamage,endTurn,calcPower,calcSoul,makeSandboxState,mkCard,runAttackFx,canSelfEncore,selfEncoreCandidates,attackBattleStep,finalizeEncore,processEncore,processTewiTriggers,tewiApply,deckMapToList,BUILTIN_DECKS,deckPairsToKeys,makeRandomDeckList,loadDecks,saveDecks,nm,pb,encoreCost,clockThresholdFor,loseLevelFor,isHuman,startPhaseChain,checkZeroPowerDestroy,gameReducerInner,attackAfterConfirm,declareAttack};
+}module.exports = { DEFS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState };module.exports = { DEFS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState, clockThresholdFor, deckMapToList, mkCard, loseLevelFor, calcPower, runAttackFx };
+module.exports = { DEFS, BUILTIN_DECKS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, attackBattleStep, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState, clockThresholdFor, deckMapToList, mkCard, loseLevelFor, calcPower, runAttackFx };
+module.exports = { DEFS, BUILTIN_DECKS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, attackBattleStep, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState, clockThresholdFor, deckMapToList, mkCard, loseLevelFor, calcPower, runAttackFx, canSelfEncore, saveDecks, loadDecks, processEncore };
