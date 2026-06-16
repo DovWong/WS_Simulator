@@ -102,15 +102,14 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 - 實作提示：這些觸發目前綁在 attackBattleStep 的 defenderReversed/recordTewi。力量歸零設的 reverse
   要與「戰鬥造成的 reverse」區分（已有 zeroDestroying 標記可用），確保不進這些觸發路徑。
 
-### B. 戰鬥是否發生 + counter 對象判定
-- **攻擊方或防守方角色有「變動」（位置/存在改變，含 encore 復活後算「不同角色」）→ 戰鬥不發生。**
-- 宣言正面攻擊 → 防守方**一定有反擊階段**（counter step 必到）。
-- 戰鬥沒發生時（風CX BLUE3_LOOK3_BURN／防守方角色變動等）：
-  - counter 若**指定「被正面攻擊的角色」或「正在戰鬥的角色」**為對象 → 找不到對象、**無法發動**。
-  - counter **沒指定對象**（有其他可生效對象）→ **可以發動**。
-- 實作提示：破壞/encore 發生時設一個「角色變動」旗標（如 ctx.battleVoided 或 attacker/defender 上的旗標），
-  attackBattleStep 看到就跳過戰鬥傷害判定。counter step 的對象解析要依「是否指定戰鬥/正面攻擊對象」分流。
-  **這段精細規則照 J 上傳的 WS 規則原文實作，勿猜。**
+### B. 戰鬥是否發生 + counter 對象判定（照官方規則 7.3–7.6，已實作）
+- 正面攻擊 → counter step **必到**（規則 7.3.1.3），不因角色變動取消。
+- 防守方一次 play timing，只能打**一張** event 或 counter 能力（7.4.1.2.2）。
+- counter 卡能否生效 = 看**該卡自身效果文字**有無合法對象；counter step 不做「指定/不指定對象」分流。
+  - 例：COUNTER_INITIAL_P1500 效果文字指定「初始角色」，若交戰防守者不存在或非初始 → 無合法對象 → 無法發動。
+- **攻擊或防守角色被破壞（規則 7.6.1.3）→ 戰鬥不發生**：用 `ctx.battleVoided` 旗標，attackBattleStep 看到跳過。
+  - 旗標在 checkZeroPowerDestroy 內，標記 zeroDestroying 時若命中 attackCtx 的攻/守位置就設 true。
+- ~~舊版「指定被正面攻擊角色 vs 不指定對象」分流~~ → 此為猜測，規則裡沒有，**已捨棄**。
 
 ## 互動 pending 模式速查
 - TEWI_SELECT（戰場高亮選夥伴→確認）、ENCORE_SELECT（戰場高亮reverse→點選）、
