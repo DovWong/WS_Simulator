@@ -1985,6 +1985,18 @@ function checkZeroPowerDestroy(s) {
       });
     }
   }
+  // 攻擊效果（メディスン等）的零破壞 encore 結算完後，從這裡恢復攻擊流程
+  // （ZERO_ENCORE_SELECT/SELF_ENCORE_ASK handler 用 return checkZeroPowerDestroy(s) 收尾，
+  //   無法落到 resolvePending 的 resume 區，所以在這裡統一處理）
+  if (!s.pending && s.attackCtx) {
+    const _r = s.attackCtx.resumeAfterPending;
+    if (_r) {
+      s.attackCtx.resumeAfterPending = null;
+      if (_r === 'burn') return attackBurnStep(s);
+      if (_r === 'counter') return attackCounterStep(s);
+      if (_r === 'battle') return attackBattleStep(s);
+    }
+  }
   return s;
 }
 function declareAttack(s, slot, kind) {
@@ -2891,7 +2903,7 @@ function finalizeEncore(s) {
         const cand = selfEncoreCandidates(P, se)[0];
         const di = P.hand.findIndex(c => c.id === cand.id);
         P.wr.push(P.hand.splice(di, 1)[0]);
-        card.state = 'rest';
+        card.state = 'rest'; card.autoBuff = null;
         s.log.push(`${P.name} 自身 Encore：${card.def.name} 復活。`);
         if (!s.banners) s.banners = [];
         s.banners.push({
@@ -2911,7 +2923,7 @@ function finalizeEncore(s) {
       }
       if (doEncore) {
         for (let i = 0; i < 3; i++) P.wr.push(P.stock.pop());
-        card.state = 'rest';
+        card.state = 'rest'; card.autoBuff = null;
         s.log.push(`${P.name} Encore：${card.def.name} 復活。`);
         if (!s.banners) s.banners = [];
         s.banners.push({
@@ -3316,7 +3328,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (choice.yes && PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest';
+            card.state = 'rest'; card.autoBuff = null;
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
             s.banners.push({
@@ -3390,7 +3402,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest';
+            card.state = 'rest'; card.autoBuff = null;
             if (p.zeroSrc) { card.justEncored = true; card.zeroDestroying = false; }
             s.log.push(`Encore：${card.def.name} 復活(橫置，付${eCost}錢)。`);
             if (!s.banners) s.banners = [];
@@ -3410,7 +3422,7 @@ function resolvePending(s, choice) {
           const cand = selfEncoreCandidates(PP, se).some(c => c.id === choice.discardId);
           if (di >= 0 && cand) {
             PP.wr.push(PP.hand.splice(di, 1)[0]);
-            card.state = 'rest';
+            card.state = 'rest'; card.autoBuff = null;
             if (p.zeroSrc) { card.justEncored = true; card.zeroDestroying = false; }
             s.log.push(`自身 Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
@@ -3444,7 +3456,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest';
+            card.state = 'rest'; card.autoBuff = null;
             if (p.zeroSrc) { card.justEncored = true; card.zeroDestroying = false; }
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
@@ -3512,7 +3524,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest';
+            card.state = 'rest'; card.autoBuff = null;
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
             s.banners.push({
@@ -3578,7 +3590,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest';
+            card.state = 'rest'; card.autoBuff = null;
             card.justEncored = true;
             card.zeroDestroying = false;
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
@@ -6091,6 +6103,6 @@ function SandboxPanel(props) {
       style: miniBtn('var(--panel)')
     }, zone === 'deck' ? '填滿' : '清'));
   })), cardPicker);
-}module.exports = { DEFS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState };module.exports = { DEFS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState, clockThresholdFor, deckMapToList, mkCard, loseLevelFor, calcPower, runAttackFx };
-module.exports = { DEFS, BUILTIN_DECKS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, attackBattleStep, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState, clockThresholdFor, deckMapToList, mkCard, loseLevelFor, calcPower, runAttackFx };
+}
+
 module.exports = { DEFS, BUILTIN_DECKS, initialState, gameReducer, gameReducerInner, resolvePending, checkLevelUp, dealBattleDamage, checkZeroPowerDestroy, attackAfterConfirm, attackBattleStep, declareAttack, endTurn, encoreCost, pb, activateConcentrate, startPhaseChain, makeRandomDeckList, deckPairsToKeys, makeSandboxState, clockThresholdFor, deckMapToList, mkCard, loseLevelFor, calcPower, runAttackFx, canSelfEncore, saveDecks, loadDecks, processEncore };
