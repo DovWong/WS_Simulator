@@ -65,42 +65,32 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 3. **力量歸零破壞**（ZERO_ENCORE_SELECT）：任何 state（含本來就 reverse/rest）力量<=0 立即破壞；多隻同時歸零像 encore 高亮逐隻選；人類問 encore，NPC 一律落控室。復活角色設 justEncored 當回合不再被重複破壞。用 zeroDestroying 標記破壞流程中的卡。
 4. **翻頂判定兩段式 banner**：メディスン/にとり 發動時，中心先顯示「公開牌庫頂+第1張卡」停1秒，再顯示「發動成功（含效果）/失敗」（pushReveal helper，kind:'reveal'）。
 5. **效果縮寫修正**：CardFace 的 _fxArr 之前誤用 c.def.fxList（c 已是 def），改 c.fxList/c.fx，縮寫恢復顯示。
-6. **戰鬥前破壞**：attackBattleStep 開頭若攻擊對象 calcPower<=0 則直接破壞、跳過戰鬥（雛形，待整合進下面的時序重構）。
+6. **攻擊時序重構**（✅ 已完成並測試）：見下方已完成段落。
 
-## ★★ 待辦：攻擊時序重構（J 已確認設計，Project 第一件事）
+## ★★ 攻擊時序重構（✅ 已完成）
 
-### 正確的標準時序（正面攻擊）
+### 實作摘要
+- **gameReducer** 移除全域 checkZeroPowerDestroy wrapper，改為綁在破壞源。
+- **runAttackFx**（メディスン等減力）尾端明確呼叫 checkZeroPowerDestroy；三個呼叫點加 `resumeAfterPending='burn'` 中斷機制。
+- **checkZeroPowerDestroy** 尾端加 resumeAfterPending 恢復邏輯（burn/counter/battle），修正 encore handler 用 return 繞過 resolvePending resume 區的問題。
+- **battleVoided 旗標**：checkZeroPowerDestroy 標記 zeroDestroying 時，若命中 attackCtx 攻/守位置就設 `ctx.battleVoided = true`；attackBattleStep 看到旗標跳過戰鬥（規則 7.6.1.3）。
+- **假倒置不觸發「倒置時」效果**：battleVoided 跳過整個 battle block，defenderReversed/recordTewi 等觸發路徑自然不被假倒置命中。
+- **encore 復活清 autoBuff**：8 處 encore 復活點加 `card.autoBuff = null`，復活角色視為新角色，前效果不殘留。
+- **開發守則（重要）**：日後新增減力/破壞效果，寫完記得 call 一次 `checkZeroPowerDestroy(s)`。
+
+### 正確的攻擊標準時序（正面攻擊，已實作）
 1. 宣言攻擊
-2. 攻擊宣言時效果（公開卡組面、減攻擊力等「攻擊時」效果）
-3. **Trigger（翻頂 trigger check）**
-4. **Counter step（反擊階段）**（標準：Trigger→Counter，要確認現碼順序）
+2. 攻擊宣言時效果（runAttackFx：翻頂/減力等）→ 若有角色歸零立即破壞+encore → 才進 Trigger
+3. Trigger（翻頂 trigger check）
+4. Counter step（正面攻擊必到，防守方一次只能打一張）
 5. 傷害結算
-6. 戰鬥（battle：比力量、倒置）
-7. 戰鬥後的正式 encore phase
+6. 戰鬥（比力量；攻/守角色有「變動」→ 不發生）
+7. 戰鬥後 encore phase
 
-### 「力量歸零破壞 + encore」是隨時觸發的『規則處理』，不固定步驟
-- **準則：任何「會導致角色進控室」的效果**（減力到<=0、直接破壞、反擊 event 的破壞/減力），
-  在它發動、效果結算完的**當下**，自己接一次 checkZeroPowerDestroy(s)。處理完（落控室→問encore→encore完）才繼續原本步驟。
-- 例：攻擊時減力（メディスン）→ 力量<=0 → 立刻破壞+encore → 才進 Trigger。
-- 例：counter step 防守方用反擊 event 把我方角色打進控室 → **傷害結算前**立刻破壞+encore。
-
-### J 拍板的實作方向（取代「每步都檢查」）
-- **不要**在攻擊鏈每步都插檢查（浪費，多數時候無減力效果）。
-- **改為綁在「破壞源」上**：每個減力/破壞效果尾端**明確呼叫一次** checkZeroPowerDestroy(s)。
-- 因此要：
-  1. **移除** gameReducer wrapper 那個「每個 action 後都跑 checkZeroPowerDestroy」的全域檢查（現在 gameReducer→gameReducerInner 的包裝）。
-  2. メディスン 等減力效果尾端改為**明確呼叫** checkZeroPowerDestroy。
-  3. 未來新增減力/破壞卡的開發守則：**寫完減力/破壞，記得 call 一次 checkZeroPowerDestroy**。
-- 留意：checkZeroPowerDestroy 開頭有 `if(s.pending) return`，若減力效果本身設了 pending 會被擋；減力通常同步，個案處理。
-
-### A. 假倒置不可觸發任何「倒置時」效果（重要）
-- 力量歸零的「破壞」**實際規則是直接落控室，不是倒置**。為複用 encore UI 保留 reverse 外觀 OK，
-  但這個假倒置**絕不能觸發任何倒置相關效果**：
-  - 我方「使對方倒置」的 CX 連動（CXC_DOOR_REVERSE_RECOVER 紅蓮回收、BLUE3_PACKAGE 藍閘再攻）
-  - てゐ「戰鬥對手被倒置時」（BATTLE_OPP_REVERSE_MOVE）
-  - 其他「被倒置時發動」的卡
-- 實作提示：這些觸發目前綁在 attackBattleStep 的 defenderReversed/recordTewi。力量歸零設的 reverse
-  要與「戰鬥造成的 reverse」區分（已有 zeroDestroying 標記可用），確保不進這些觸發路徑。
+### 規則要點（已實作，供未來新卡參考）
+- checkZeroPowerDestroy 開頭有 `if(s.pending) return`；減力通常同步，直接 call 無問題。
+- counter 卡能否生效 = 看卡自身效果文字有無合法對象；counter step 不做分流。
+- 破壞/encore 後 battleVoided=true → counter step 仍進行，但 battle 跳過。
 
 ### B. 戰鬥是否發生 + counter 對象判定（照官方規則 7.3–7.6，已實作）
 - 正面攻擊 → counter step **必到**（規則 7.3.1.3），不因角色變動取消。
