@@ -1,7 +1,7 @@
 const React = { createElement: () => ({}) };
 const localStorage = { getItem: () => null, setItem: () => {} };
-const btoa = (s) => Buffer.from(s).toString('base64');
-const atob = (s) => Buffer.from(s, 'base64').toString();
+const btoa = (s) => Buffer.from(s).toString("base64");
+const atob = (s) => Buffer.from(s, "base64").toString();
 
 
 /* ============================================================
@@ -662,9 +662,9 @@ const DEFS = {
     type: 'CX', rarity: 'CR', 作品: '東方Project',
     color: 'red', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.SWITCH,
-    cont: 'ALL_P1000_S1',
+    cont: null,
     fx: 'CX_ON_PLAY_SWITCH',
-    text: '【永】全體角色 +1000 力量、+1 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 自身等級+1 的角色，REST 放入任意舞台格。（掣觸發：同效果，另 +1 魂）'
+    text: '【自】此牌出場時，可從控室選 1 隻等級 ≤ 自身等級+1 的角色，REST 放入任意舞台格。（掣觸發：同效果，另 +1 魂）'
   },
 
   // D 書 (BOOK) ─ 藍
@@ -684,9 +684,9 @@ const DEFS = {
     type: 'CX', rarity: 'CR', 作品: '東方Project',
     color: 'green', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.DSOUL,
-    cont: 'ALL_S2',
+    cont: 'ALL_S1',
     fx: 'CX_ON_PLAY_WR_L1MINUS_STOCK',
-    text: '【永】全體角色 +2 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。'
+    text: '【永】全體角色 +1 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。'
   }
 };
 
@@ -1067,6 +1067,7 @@ function continuousFromCX(P, card, slot) {
   P.cx.forEach(cx => {
     if (cx.def.cont === 'ALL_P1000_S1') { power += 1000; soul += 1; }
     if (cx.def.cont === 'ALL_S2') { soul += 2; }
+    if (cx.def.cont === 'ALL_S1') { soul += 1; }
   });
   return {
     power,
@@ -1409,8 +1410,8 @@ function gameReducerInner(state, action) {
           s.log.push('本回合已打過高潮卡。');
           return s;
         }
-        // CX 顏色規則：即使0費也要 Level區或Clock區有同色（沙盒及單機NPC略過，僅連線模式強制）
-        if (!s.sandbox && s.mode === 'net') {
+        // CX 顏色規則：即使0費也要 Level區或Clock區有同色（沙盒略過）
+        if (!s.sandbox) {
           const color = card.def.color;
           const hasColor = P.level.some(c => c.def.color === color) || P.clock.some(c => c.def.color === color);
           if (!hasColor) {
@@ -2725,8 +2726,8 @@ function attackTriggerStep(s) {
       trigMsg += `（風，+1 Soul）`;
     }
     if (trigCard.def.trig === TRIG.DSOUL) {
-      bonusSoul += 1;
-      trigMsg += `（双魂，+1 Soul）`;
+      bonusSoul += 2;
+      trigMsg += `（双魂，+2 Soul）`;
     }
     s.log.push(trigMsg);
     if (trigCard.def.trig === TRIG.STANDBY) s = doStandby(s, ctx.aPIdx, trigCard);
@@ -6965,6 +6966,9 @@ function SandboxPanel(props) {
     },
     style: miniBtn('var(--panel)')
   }, '重設'), e('button', {
+    onClick: () => props.onShowCardLib && props.onShowCardLib(),
+    style: miniBtn('var(--accent-y,#c8a000)')
+  }, '📋 全部卡'), e('button', {
     onClick: () => setOpen(false),
     style: miniBtn('var(--panel)')
   }, '收起'), props.onExit ? e('button', {
@@ -7098,13 +7102,4 @@ function SandboxPanel(props) {
 }
 
 
-module.exports = {
-  DEFS, TRIG, initialState, gameReducer, resolvePending,
-  checkLevelUp, dealBattleDamage, makeSandboxState, mkCard,
-  clockThresholdFor, deckMapToList, BUILTIN_DECKS, loseLevelFor,
-  saveDecks, loadDecks, attackBattleStep, processEncore,
-  checkZeroPowerDestroy, gameReducerInner, attackAfterConfirm, declareAttack,
-  endTurn, encoreCost, pb, startPhaseChain,
-  makeRandomDeckList, deckPairsToKeys, activateConcentrate, calcPower, runAttackFx,
-  canSelfEncore
-};
+module.exports = { DEFS, TRIG, initialState, gameReducer, resolvePending, checkLevelUp, dealBattleDamage, makeSandboxState, mkCard, clockThresholdFor, deckMapToList, BUILTIN_DECKS, loseLevelFor, saveDecks, loadDecks, attackBattleStep, processEncore, checkZeroPowerDestroy, gameReducerInner, attackAfterConfirm, declareAttack, endTurn, encoreCost, pb, startPhaseChain, makeRandomDeckList, deckPairsToKeys, activateConcentrate, calcPower, runAttackFx, canSelfEncore };

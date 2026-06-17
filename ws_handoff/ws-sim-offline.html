@@ -1035,9 +1035,9 @@ const DEFS = {
     type: 'CX', rarity: 'CR', 作品: '東方Project',
     color: 'red', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.SWITCH,
-    cont: 'ALL_P1000_S1',
+    cont: null,
     fx: 'CX_ON_PLAY_SWITCH',
-    text: '【永】全體角色 +1000 力量、+1 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 自身等級+1 的角色，REST 放入任意舞台格。（掣觸發：同效果，另 +1 魂）'
+    text: '【自】此牌出場時，可從控室選 1 隻等級 ≤ 自身等級+1 的角色，REST 放入任意舞台格。（掣觸發：同效果，另 +1 魂）'
   },
 
   // D 書 (BOOK) ─ 藍
@@ -1057,9 +1057,9 @@ const DEFS = {
     type: 'CX', rarity: 'CR', 作品: '東方Project',
     color: 'green', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.DSOUL,
-    cont: 'ALL_S2',
+    cont: 'ALL_S1',
     fx: 'CX_ON_PLAY_WR_L1MINUS_STOCK',
-    text: '【永】全體角色 +2 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。'
+    text: '【永】全體角色 +1 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。'
   }
 };
 
@@ -1440,6 +1440,7 @@ function continuousFromCX(P, card, slot) {
   P.cx.forEach(cx => {
     if (cx.def.cont === 'ALL_P1000_S1') { power += 1000; soul += 1; }
     if (cx.def.cont === 'ALL_S2') { soul += 2; }
+    if (cx.def.cont === 'ALL_S1') { soul += 1; }
   });
   return {
     power,
@@ -1782,8 +1783,8 @@ function gameReducerInner(state, action) {
           s.log.push('本回合已打過高潮卡。');
           return s;
         }
-        // CX 顏色規則：即使0費也要 Level區或Clock區有同色（沙盒及單機NPC略過，僅連線模式強制）
-        if (!s.sandbox && s.mode === 'net') {
+        // CX 顏色規則：即使0費也要 Level區或Clock區有同色（沙盒略過）
+        if (!s.sandbox) {
           const color = card.def.color;
           const hasColor = P.level.some(c => c.def.color === color) || P.clock.some(c => c.def.color === color);
           if (!hasColor) {
@@ -3098,8 +3099,8 @@ function attackTriggerStep(s) {
       trigMsg += `（風，+1 Soul）`;
     }
     if (trigCard.def.trig === TRIG.DSOUL) {
-      bonusSoul += 1;
-      trigMsg += `（双魂，+1 Soul）`;
+      bonusSoul += 2;
+      trigMsg += `（双魂，+2 Soul）`;
     }
     s.log.push(trigMsg);
     if (trigCard.def.trig === TRIG.STANDBY) s = doStandby(s, ctx.aPIdx, trigCard);
@@ -7338,6 +7339,9 @@ function SandboxPanel(props) {
     },
     style: miniBtn('var(--panel)')
   }, '重設'), e('button', {
+    onClick: () => props.onShowCardLib && props.onShowCardLib(),
+    style: miniBtn('var(--accent-y,#c8a000)')
+  }, '📋 全部卡'), e('button', {
     onClick: () => setOpen(false),
     style: miniBtn('var(--panel)')
   }, '收起'), props.onExit ? e('button', {
@@ -7484,7 +7488,8 @@ function CardFace({
   fill,
   hand,
   bannerMode,
-  highlight
+  highlight,
+  tested
 }) {
   if (!card) return null;
   const c = card.def;
@@ -7688,7 +7693,21 @@ function CardFace({
       fontWeight: 700
     },
     className: "mono"
-  }, badge));
+  }, badge), tested && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      bottom: 2,
+      left: 2,
+      background: '#2a9',
+      color: '#fff',
+      borderRadius: 6,
+      fontSize: 8,
+      padding: '1px 4px',
+      fontWeight: 700,
+      pointerEvents: 'none',
+      zIndex: 2
+    }
+  }, '✓測試'));
 }
 function Zone({
   label,
@@ -8454,6 +8473,14 @@ function Game({
   const [isFs, setIsFs] = useState(false); // 全螢幕
   const [clockConfirm, setClockConfirm] = useState(null); // Clock 棄牌確認 {id}
   const [cxConfirm, setCxConfirm] = useState(null); // CX 打出確認 {id}
+  const [testedKeys, setTestedKeys] = useState(() => new Set(JSON.parse(localStorage.getItem('wsTestedKeys') || '[]')));
+  const [showCardLib, setShowCardLib] = useState(false);
+  const toggleTested = (key) => setTestedKeys(prev => {
+    const n = new Set(prev);
+    if (n.has(key)) n.delete(key); else n.add(key);
+    localStorage.setItem('wsTestedKeys', JSON.stringify([...n]));
+    return n;
+  });
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [confirmEndAtk, setConfirmEndAtk] = useState(false);
   const [hideResult, setHideResult] = useState(false); // 勝負後「回到戰鬥」看盤面
@@ -10019,7 +10046,8 @@ function Game({
       dimmed: sel != null && sel !== c.id || state.phase === 'climax' && !isCX,
       badge: sel === c.id ? '選中' : cxConfirm && cxConfirm.id === c.id ? '確認？' : cxPlayable ? '可打' : null,
       highlight: !!(cxConfirm && cxConfirm.id === c.id),
-      onInfo: setInfoCard
+      onInfo: setInfoCard,
+      tested: !!(state.sandbox && testedKeys.has(c.key))
     }));
   })), state.phase === 'clock' && yourTurn && !state.pending && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -10170,7 +10198,8 @@ function Game({
     onInfo: setInfoCard,
     fill: true,
     highlightSlots: (state.pending && state.pending.type === 'WIND_SELECT' && state.pending.pIdx === myIdx ? state.players[oppIdx].stage.map((c,i) => c ? i : -1).filter(i => i >= 0) : null) || (state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending.type === 'CHARSEL_BUFF' ? state.pending.cand : state.pending.type === 'SEPTET_CX_COST' ? state.pending.otherChars : state.pending.type === 'SWITCH_SLOT_SELECT' ? state.pending.slots : null)) || null,
-    selStage: state.sandbox && state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === oppIdx ? tewiSel : null
+    selStage: state.sandbox && state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === oppIdx ? tewiSel : null,
+    testedKeys: state.sandbox ? testedKeys : null
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: '1px dashed var(--line)',
@@ -10184,7 +10213,8 @@ function Game({
     onInfo: setInfoCard,
     fill: true,
     highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'CHARSEL_BUFF' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'SEPTET_CX_COST' && state.pending.pIdx === myIdx ? state.pending.otherChars : state.pending && state.pending.type === 'SWITCH_SLOT_SELECT' && state.pending.pIdx === myIdx ? state.pending.slots : null,
-    selStage: state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? tewiSel : selStage
+    selStage: state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? tewiSel : selStage,
+    testedKeys: state.sandbox ? testedKeys : null
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 14,
@@ -11112,9 +11142,14 @@ function Game({
     state: state,
     act: act,
     onUndo: sandboxUndo,
+    onShowCardLib: () => setShowCardLib(true),
     onExit: () => {
       if (confirm('離開沙盒回到主選單？')) setState(null);
     }
+  }), showCardLib && state.sandbox && /*#__PURE__*/React.createElement(CardLibModal, {
+    testedKeys: testedKeys,
+    onToggle: toggleTested,
+    onClose: () => setShowCardLib(false)
   }));
 }
 function ClockControls({
@@ -11175,7 +11210,8 @@ function StageRow({
   selStage,
   onInfo,
   fill,
-  highlightSlots
+  highlightSlots,
+  testedKeys
 }) {
   const P = state.players[pIdx];
   const back = BACK,
@@ -11240,7 +11276,8 @@ function StageRow({
       badge: selStage === slot ? '移動' : isHl ? '點我' : null,
       flip: flip,
       fill: fill,
-      highlight: isHl
+      highlight: isHl,
+      tested: !!(testedKeys && card && testedKeys.has(card.key))
     }) : /*#__PURE__*/React.createElement("span", {
       style: {
         color: isHl ? 'var(--accent)' : 'var(--line)',
@@ -11249,6 +11286,74 @@ function StageRow({
       className: "mono"
     }, isHl ? '放這' : isBack ? '後' + slot : '前' + slot));
   }))));
+}
+function CardLibModal({ testedKeys, onToggle, onClose }) {
+  const e = React.createElement;
+  const works = [...new Set(Object.values(DEFS).map(d => d['作品']))].filter(Boolean);
+  const [filterWork, setFilterWork] = React.useState('');
+  const keys = Object.keys(DEFS);
+  const filtered = keys.filter(k => {
+    const d = DEFS[k];
+    if (filterWork && d['作品'] !== filterWork) return false;
+    return true;
+  });
+  const COLOR_LABEL = { red: '紅', blue: '藍', yellow: '黃', green: '綠' };
+  return e('div', {
+    onClick: onClose,
+    style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }
+  }, e('div', {
+    onClick: ev => ev.stopPropagation(),
+    style: { background: 'var(--panel)', borderRadius: 14, border: '1px solid var(--line)', width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+  },
+    e('div', { style: { padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 } },
+      e('span', { style: { fontWeight: 700, fontSize: 16, flex: 1 } }, '📋 全部卡（' + filtered.length + ' 張）'),
+      e('select', {
+        value: filterWork,
+        onChange: ev => setFilterWork(ev.target.value),
+        style: { background: 'var(--bg)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 6, padding: '3px 8px', fontSize: 13 }
+      },
+        e('option', { value: '' }, '全部作品'),
+        works.map(w => e('option', { key: w, value: w }, w))
+      ),
+      e('button', { onClick: onClose, style: { background: 'transparent', color: 'var(--ink-dim)', border: 'none', fontSize: 20, cursor: 'pointer', lineHeight: 1 } }, '✕')
+    ),
+    e('div', { style: { overflowY: 'auto', flex: 1, padding: '6px 8px' } },
+      e('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: 12 } },
+        e('thead', null,
+          e('tr', { style: { color: 'var(--ink-dim)', borderBottom: '1px solid var(--line)' } },
+            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '卡名'),
+            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '類型'),
+            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, 'Lv/費'),
+            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '顏色'),
+            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '觸發'),
+            e('th', { style: { textAlign: 'center', padding: '4px 6px' } }, '狀態')
+          )
+        ),
+        e('tbody', null,
+          filtered.map(key => {
+            const d = DEFS[key];
+            const done = testedKeys.has(key);
+            return e('tr', {
+              key,
+              style: { borderBottom: '1px solid rgba(255,255,255,.05)', background: done ? 'rgba(30,180,100,.08)' : 'transparent' }
+            },
+              e('td', { style: { padding: '5px 6px', color: 'var(--ink)', fontWeight: done ? 700 : 400 } }, d.name),
+              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, d.type === 'CX' ? 'CX' : '角色'),
+              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, d.type === 'CX' ? 'CX' : 'L' + d.level + '/C' + d.cost),
+              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, COLOR_LABEL[d.color] || d.color),
+              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, trigName(d.trig)),
+              e('td', { style: { padding: '5px 6px', textAlign: 'center' } },
+                e('button', {
+                  onClick: () => onToggle(key),
+                  style: { background: done ? '#2a9' : 'var(--panel)', color: done ? '#fff' : 'var(--ink-dim)', border: '1px solid ' + (done ? '#2a9' : 'var(--line)'), borderRadius: 6, padding: '2px 8px', fontSize: 11, cursor: 'pointer', fontWeight: done ? 700 : 400 }
+                }, done ? '✓ 已測試' : '標記')
+              )
+            );
+          })
+        )
+      )
+    )
+  ));
 }
 function PendingModal({
   state,
