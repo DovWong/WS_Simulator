@@ -623,7 +623,7 @@ const DEFS = {
     color: 'yellow', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.CHOICE,
     cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（選觸發：可從控室選 1 張有魂觸發圖標的角色，加手牌或放股票）'
+    text: '【永】全體角色 +1000 力量、+1 魂。（選觸發：可從控室選 1 張有魂觸發圖標的角色，加手牌或放錢區）'
   },
 
   // 1A 風 (WIND) ─ 黃
@@ -643,7 +643,7 @@ const DEFS = {
     color: 'green', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.BRICK,
     cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（磚觸發：此 CX 加入手牌；可選擇把牌庫頂 1 張放股票）'
+    text: '【永】全體角色 +1000 力量、+1 魂。（磚觸發：此 CX 加入手牌；可選擇把牌庫頂 1 張放錢區）'
   },
 
   // 2 双魂 (DSOUL) ─ 紅
@@ -6216,7 +6216,7 @@ function DeckBuilder(props) {
         fontSize: 11,
         color: 'var(--ink-dim)'
       }
-    }, WS_TYPE_NAME[c.type] + ' · ' + WS_COLOR_NAME[c.color] + ' · ' + c.rarity + (c.type !== 'CX' ? ' · 費' + c.cost : '')), e('div', {
+    }, WS_TYPE_NAME[c.type] + ' · ' + WS_COLOR_NAME[c.color] + ' · ' + c.rarity + (c.type !== 'CX' ? ' · 費' + c.cost : '') + (() => { const TSSB = { [TRIG.GATE]: 1, [TRIG.SWITCH]: 1, [TRIG.WIND]: 1, [TRIG.DSOUL]: 2, [TRIG.SOUL]: 1 }; const ts = c.tsoul || TSSB[c.trig] || 0; return ts > 0 ? ' · ◈×' + ts : ''; })()), e('div', {
       style: {
         fontSize: 12,
         color: 'var(--ink)',
@@ -6858,12 +6858,12 @@ function SandboxPanel(props) {
         fontSize: 14,
         color: col
       }
-    }, d.power) : null), e('div', {
+    }, d.power) : null, props.testedKeys && props.testedKeys.has(k) ? e('span', { style: { background: '#2a9', color: '#fff', borderRadius: 5, padding: '1px 6px', fontSize: 11, fontWeight: 700, flexShrink: 0 } }, '✓ 已測試') : null), e('div', {
       style: {
         fontSize: 11,
         color: 'var(--ink-dim)'
       }
-    }, (d.type === 'CX' ? 'CX' : d.type === 'EVENT' ? 'Event' : '角色') + ' · ' + d.rarity + (d.type !== 'CX' ? ' · 費' + d.cost + ' · soul' + d.soul : '')), e('div', {
+    }, (d.type === 'CX' ? 'CX' : d.type === 'EVENT' ? 'Event' : '角色') + ' · ' + d.rarity + (d.type !== 'CX' ? ' · 費' + d.cost + ' · soul' + d.soul : '') + (() => { const TSSB = { [TRIG.GATE]: 1, [TRIG.SWITCH]: 1, [TRIG.WIND]: 1, [TRIG.DSOUL]: 2, [TRIG.SOUL]: 1 }; const ts = d.tsoul || TSSB[d.trig] || 0; return ts > 0 ? ' · ◈×' + ts : ''; })()), e('div', {
       style: {
         fontSize: 12,
         color: 'var(--ink)',
