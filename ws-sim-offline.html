@@ -9428,7 +9428,7 @@ function Game({
         marginBottom: 24
       },
       className: "mono"
-    }, "\u5C0D\u6230\u6A21\u64EC\u5668 \u2014 \u898F\u5247\u5F15\u64CE\u539F\u578B v0.5"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5C0D\u6230\u6A21\u64EC\u5668 \u2014 \u898F\u5247\u5F15\u64CE\u539F\u578B v0.7"), /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 24
       }
@@ -11149,6 +11149,7 @@ function Game({
   }), showCardLib && state.sandbox && /*#__PURE__*/React.createElement(CardLibModal, {
     testedKeys: testedKeys,
     onToggle: toggleTested,
+    onImport: (keys) => { const n = new Set(keys); localStorage.setItem('wsTestedKeys', JSON.stringify([...n])); setTestedKeys(n); },
     onClose: () => setShowCardLib(false)
   }));
 }
@@ -11287,7 +11288,7 @@ function StageRow({
     }, isHl ? '放這' : isBack ? '後' + slot : '前' + slot));
   }))));
 }
-function CardLibModal({ testedKeys, onToggle, onClose }) {
+function CardLibModal({ testedKeys, onToggle, onImport, onClose }) {
   const e = React.createElement;
   const works = [...new Set(Object.values(DEFS).map(d => d['作品']))].filter(Boolean);
   const [filterWork, setFilterWork] = React.useState('');
@@ -11307,6 +11308,8 @@ function CardLibModal({ testedKeys, onToggle, onClose }) {
   },
     e('div', { style: { padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 } },
       e('span', { style: { fontWeight: 700, fontSize: 16, flex: 1 } }, '📋 全部卡（' + filtered.length + ' 張）'),
+      e('button', { onClick: doExport, style: { background: 'var(--accent-y,#c8a000)', color: '#000', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700 } }, '匯出 JSON'),
+      e('button', { onClick: doImport, style: { background: 'var(--panel)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' } }, '匯入 JSON'),
       e('select', {
         value: filterWork,
         onChange: ev => setFilterWork(ev.target.value),

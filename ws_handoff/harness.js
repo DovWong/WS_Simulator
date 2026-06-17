@@ -1,7 +1,7 @@
 const React = { createElement: () => ({}) };
 const localStorage = { getItem: () => null, setItem: () => {} };
-const btoa = (s) => Buffer.from(s).toString("base64");
-const atob = (s) => Buffer.from(s, "base64").toString();
+const btoa = (s) => Buffer.from(s).toString('base64');
+const atob = (s) => Buffer.from(s, 'base64').toString();
 
 
 /* ============================================================
@@ -7101,5 +7101,9 @@ function SandboxPanel(props) {
   })), cardPicker);
 }
 
-
-module.exports = { DEFS, TRIG, initialState, gameReducer, resolvePending, checkLevelUp, dealBattleDamage, makeSandboxState, mkCard, clockThresholdFor, deckMapToList, BUILTIN_DECKS, loseLevelFor, saveDecks, loadDecks, attackBattleStep, processEncore, checkZeroPowerDestroy, gameReducerInner, attackAfterConfirm, declareAttack, endTurn, encoreCost, pb, startPhaseChain, makeRandomDeckList, deckPairsToKeys, activateConcentrate, calcPower, runAttackFx, canSelfEncore };
+module.exports = { DEFS, TRIG, initialState, gameReducer, resolvePending, checkLevelUp,
+  dealBattleDamage, makeSandboxState, mkCard, clockThresholdFor, deckMapToList,
+  BUILTIN_DECKS, loseLevelFor, saveDecks, loadDecks, attackBattleStep, processEncore,
+  checkZeroPowerDestroy, gameReducerInner, attackAfterConfirm, declareAttack,
+  endTurn, encoreCost, pb, startPhaseChain, makeRandomDeckList, deckPairsToKeys,
+  activateConcentrate, calcPower, runAttackFx, canSelfEncore };
