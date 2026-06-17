@@ -1,7 +1,8 @@
-﻿const React = { createElement: () => ({}) };
+const React = { createElement: () => ({}) };
 const localStorage = { getItem: () => null, setItem: () => {} };
 const btoa = (s) => Buffer.from(s).toString('base64');
 const atob = (s) => Buffer.from(s, 'base64').toString();
+
 
 /* ============================================================
    WS 對戰模擬器 — 規則引擎原型
@@ -17,14 +18,10 @@ const atob = (s) => Buffer.from(s, 'base64').toString();
 const TRIG = {
   NONE: 'none',
   SOUL: 'soul',
-  STANDBY: 'standby', // C 門：觸發時從控室選角色加手牌
-  GATE: 'gate',       // G 閘：觸發時從控室回收1張CX到手牌
-  CHOICE: 'choice',   // チョイス：觸發時從控室選角色加手牌（現有實作；I/選的魂圖標+手/股選項為簡化版）
-  DSOUL: 'dsoul',     // 2 双魂：全體+2魂（無+1000）
-  BRICK: 'brick',     // F 磚：觸發時CX送手牌（非控室）；可選牌庫頂→股票
-  BOOK: 'book',       // D 書：觸發時抽1張牌
-  SWITCH: 'switch',   // H/1H 掣：從控室選等級≤自身等級+1角色，REST放任意自方舞台格
-  WIND: 'wind',       // A/1A 風：把對方1隻舞台角色送回對方手牌（無空場加傷；counter照常）
+  STANDBY: 'standby',
+  // 紅門
+  GATE: 'gate', // 藍閘
+  CHOICE: 'choice' // 選擇（choice/チョイス）：觸發時從控室選1張符合條件的卡加入手牌
 };
 
 // ---- CX 名稱 ----
@@ -591,79 +588,6 @@ const DEFS = {
     trig: TRIG.STANDBY,
     cont: 'ALL_P1000_S1',
     text: '【永】全體角色 +1000 力量、+1 魂。（門觸發：可從控室選 1 張角色加入手牌）'
-  },
-
-  // ── 測試用各觸發類型代表卡（每種一張）──
-
-  // C 門 (STANDBY) ─ 紅
-  thp_cx_083: {
-    name: '夢符「封魔陣」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'red', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.STANDBY,
-    cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（門觸發：可從控室選 1 張角色加手牌）'
-  },
-
-  // 1G 閘 (GATE) ─ 藍
-  thp_cx_109: {
-    name: '「反魂蝶 ‐八分咲‐」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'blue', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.GATE,
-    cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（閘觸發：+1 魂，可從控室回收 1 張 CX 至手牌）'
-  },
-
-  // I 選 (CHOICE) ─ 黃
-  thp_cx_025: {
-    name: '「ブレイジングスター」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'yellow', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.CHOICE,
-    cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（選觸發：可從控室選 1 張有魂觸發圖標的角色，加手牌或放股票）'
-  },
-
-  // 1A 風 (WIND) ─ 黃
-  thp_cx_027: {
-    name: '永夜符「蓬莱壺中の弾の枝」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'yellow', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.WIND,
-    cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（風觸發：+1 魂，可把對方 1 隻舞台角色彈回手牌）'
-  },
-
-  // F 磚 (BRICK) ─ 綠
-  thp_cx_056: {
-    name: '想起「テリブルスーヴニール」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'green', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.BRICK,
-    cont: 'ALL_P1000_S1',
-    text: '【永】全體角色 +1000 力量、+1 魂。（磚觸發：此 CX 加入手牌；可選擇把牌庫頂 1 張放股票）'
-  },
-
-  // 2 双魂 (DSOUL) ─ 紅
-  thp_cx_087: {
-    name: '「全人類の緋想天」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'red', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.DSOUL,
-    cont: 'ALL_S2',
-    text: '【永】全體角色 +2 魂。'
-  },
-
-  // 1H 掣 (SWITCH) ─ 紅（置場時也觸發掣效果）
-  thp_cx_084: {
-    name: '「紅色の幻想郷」',
-    type: 'CX', rarity: 'CR', 作品: '東方Project',
-    color: 'red', level: 0, cost: 0, power: 0, soul: 1,
-    trig: TRIG.SWITCH,
-    cont: null,
-    fx: 'CX_ON_PLAY_SWITCH',
-    text: '【自】此牌出場時，可從控室選 1 隻等級 ≤ 自身等級+1 的角色，REST 放入任意舞台格。（掣觸發：同效果，另 +1 魂）'
   }
 };
 
@@ -1042,8 +966,10 @@ function continuousFromCX(P, card, slot) {
     soul = 0;
   // 每張在 CX 區的「持續型」CX 加成
   P.cx.forEach(cx => {
-    if (cx.def.cont === 'ALL_P1000_S1') { power += 1000; soul += 1; }
-    if (cx.def.cont === 'ALL_S2') { soul += 2; }
+    if (cx.def.cont === 'ALL_P1000_S1') {
+      power += 1000;
+      soul += 1;
+    }
   });
   return {
     power,
@@ -1397,10 +1323,7 @@ function gameReducerInner(state, action) {
         }
         P.hand.splice(idx, 1);
         P.cx.push(card);
-        {
-          const contDesc = card.def.cont === 'ALL_S2' ? '全體 +2 魂' : card.def.cont === 'ALL_P1000_S1' ? '全體 +1000 力量 +1 魂' : '';
-          s.log.push(`${P.name} 打出高潮卡：${card.def.name}${contDesc ? `（${contDesc}）` : ''}。`);
-        }
+        s.log.push(`${P.name} 打出高潮卡：${card.def.name}（全體 +1000力量 +1Soul）。`);
         if (!s.banners) s.banners = [];
         s.banners.push({
           kind: 'cx',
@@ -1427,10 +1350,6 @@ function gameReducerInner(state, action) {
             }
             // NPC：不發動（需消耗其他角色，太複雜）
           }
-        }
-        // CX_ON_PLAY_SWITCH（1H 掣）：出場時也觸發掣效果
-        if (!s.pending && (card.def.fxList || (card.def.fx ? [card.def.fx] : [])).includes('CX_ON_PLAY_SWITCH')) {
-          s = doSwitch(s, s.turnPlayer, card);
         }
         // 打完自動進 attack
         s.phase = 'attack';
@@ -2644,24 +2563,12 @@ function attackTriggerStep(s) {
     }
     if (trigCard.def.trig === TRIG.GATE) {
       bonusSoul += 1;
-      trigMsg += `（閘，+1 Soul）`;
-    }
-    if (trigCard.def.trig === TRIG.SWITCH) {
-      bonusSoul += 1;
-      trigMsg += `（掣，+1 Soul）`;
-    }
-    if (trigCard.def.trig === TRIG.WIND) {
-      bonusSoul += 1;
-      trigMsg += `（風，+1 Soul）`;
+      trigMsg += `（藍閘，+1 Soul）`;
     }
     s.log.push(trigMsg);
     if (trigCard.def.trig === TRIG.STANDBY) s = doStandby(s, ctx.aPIdx, trigCard);
     if (trigCard.def.trig === TRIG.GATE) s = doGate(s, ctx.aPIdx, trigCard);
-    if (trigCard.def.trig === TRIG.CHOICE) s = doSelect(s, ctx.aPIdx, trigCard);
-    if (trigCard.def.trig === TRIG.BRICK) s = doBrick(s, ctx.aPIdx, trigCard);
-    if (trigCard.def.trig === TRIG.BOOK) s = doBook(s, ctx.aPIdx, trigCard);
-    if (trigCard.def.trig === TRIG.SWITCH) s = doSwitch(s, ctx.aPIdx, trigCard);
-    if (trigCard.def.trig === TRIG.WIND) s = doWind(s, ctx.aPIdx, trigCard);
+    if (trigCard.def.trig === TRIG.CHOICE) s = doChoice(s, ctx.aPIdx, trigCard);
   }
   ctx.bonusSoul = bonusSoul;
   // 有 pending(門/閘需玩家選)就等，否則進 counter
@@ -2868,7 +2775,12 @@ function tewiApply(s, pIdx, fromSlot) {
   return s;
 }
 function trigName(t) {
-  return { none:'無', soul:'魂', standby:'門(C)', gate:'閘(G)', choice:'選(チョイス)', dsoul:'双魂', brick:'磚(F)', book:'書(D)', switch:'掣(H)', wind:'風(A)' }[t] || t;
+  return {
+    none: '無',
+    soul: '魂',
+    standby: '紅門',
+    gate: '藍閘'
+  }[t] || t;
 }
 
 // counter 發動：檢查條件，扣費，選加力量目標
@@ -3054,105 +2966,6 @@ function doGate(s, pIdx, cxCard) {
       big: true
     });
   }
-  return s;
-}
-// I 選：觸發時從控室選 1 隻有魂觸發圖標的角色，加手牌或放股票（玩家二選一）
-function doSelect(s, pIdx, cxCard) {
-  const P = s.players[pIdx];
-  const cands = P.wr.filter(c => c.def.type === 'CHAR' && c.def.trig === TRIG.SOUL);
-  if (cands.length === 0) {
-    s.log.push(`${P.name} 選觸發：控室無有魂圖標角色。`);
-    s = applyAliceChoiceBuff(s, pIdx);
-    return s;
-  }
-  if (isHuman(s, pIdx)) {
-    s.pending = { type: 'SELECT_RECOVER', pIdx };
-    return s;
-  }
-  // NPC：優先加手牌（較有彈性）
-  cands.sort((a, b) => b.def.power - a.def.power);
-  const cand = cands[0];
-  P.wr = P.wr.filter(c => c.id !== cand.id);
-  P.hand.push(cand);
-  s.log.push(`${P.name} 選觸發：${cand.def.name} 加入手牌。`);
-  if (!s.banners) s.banners = [];
-  s.banners.push({ kind: 'recover', title: '選觸發·回收角色', cardKeys: [cand.key], confirmBy: 'opp', byPIdx: pIdx, big: true });
-  s = applyAliceChoiceBuff(s, pIdx);
-  return s;
-}
-// F 磚：觸發時 CX 送手牌（非控室）；NPC 選擇性把牌庫頂放股票
-function doBrick(s, pIdx, cxCard) {
-  const P = s.players[pIdx];
-  // CX 送手牌
-  P.hand.push(cxCard);
-  s.log.push(`${P.name} 磚觸發：${cxCard.def.name} 加入手牌。`);
-  // 磚：可選牌庫頂→股票（人類版：自動執行，簡化）
-  if (P.deck.length > 0) {
-    const top = P.deck.pop();
-    P.stock.push(top);
-    s.log.push(`${P.name} 磚觸發：${top.def.name} 放入股票。`);
-    if (P.deck.length === 0) s = refreshNow(s, pIdx);
-  }
-  return s;
-}
-// D 書：觸發時抽1張牌
-function doBook(s, pIdx, cxCard) {
-  const P = s.players[pIdx];
-  if (P.deck.length === 0) {
-    s = refreshNow(s, pIdx);
-    if (s.players[pIdx].deck.length === 0) return s;
-  }
-  const drawn = s.players[pIdx].deck.pop();
-  s.players[pIdx].hand.push(drawn);
-  s.log.push(`${P.name} 書觸發：抽到 ${drawn.def.name}。`);
-  if (s.players[pIdx].deck.length === 0) s = refreshNow(s, pIdx);
-  return s;
-}
-// H/1H 掣：從控室選等級≤自身等級+1的角色，REST放到任意自方舞台格；觸發歸零破壞判定
-function doSwitch(s, pIdx, cxCard) {
-  const P = s.players[pIdx];
-  const myLv = P.level.length;
-  const cands = P.wr.filter(c => c.def.type === 'CHAR' && c.def.level <= myLv + 1);
-  if (cands.length === 0) {
-    s.log.push(`${P.name} 掣觸發：控室無合法角色（等級≤${myLv + 1}）。`);
-    return s;
-  }
-  if (isHuman(s, pIdx)) {
-    s.pending = { type: 'SWITCH_RECOVER', pIdx, cands: cands.map(c => c.id) };
-    return s;
-  }
-  // NPC：選最高power合法角色，放到空格優先，否則第0格
-  cands.sort((a, b) => b.def.power - a.def.power);
-  const chosen = cands[0];
-  const stage = P.stage;
-  const emptySlot = stage.findIndex(s => s === null);
-  const targetSlot = emptySlot >= 0 ? emptySlot : 0;
-  P.wr = P.wr.filter(c => c.id !== chosen.id);
-  const inst = { ...chosen, state: 'rest', autoBuff: null, justEncored: false, zeroDestroying: false };
-  stage[targetSlot] = inst;
-  s.log.push(`${P.name} 掣觸發：${chosen.def.name} REST放入舞台格${targetSlot}。`);
-  s = checkZeroPowerDestroy(s);
-  return s;
-}
-// A/1A 風：把對方1隻舞台角色送回對方手牌（無空場加傷；counter照常）
-function doWind(s, pIdx, cxCard) {
-  const oppIdx = 1 - pIdx;
-  const opp = s.players[oppIdx];
-  const occupiedSlots = opp.stage.map((c, i) => ({ c, i })).filter(x => x.c !== null);
-  if (occupiedSlots.length === 0) {
-    s.log.push(`${s.players[pIdx].name} 風觸發：對方舞台無角色。`);
-    return s;
-  }
-  if (isHuman(s, pIdx)) {
-    s.pending = { type: 'WIND_SELECT', pIdx, oppIdx };
-    return s;
-  }
-  // NPC：選對方最高power角色彈回手牌
-  occupiedSlots.sort((a, b) => (b.c.def.power || 0) - (a.c.def.power || 0));
-  const { c: target, i: slot } = occupiedSlots[0];
-  opp.stage[slot] = null;
-  opp.hand.push(target);
-  s.log.push(`${s.players[pIdx].name} 風觸發：${target.def.name} 彈回對方手牌。`);
   return s;
 }
 function recoverInitialFromWR(s, pIdx, attacker) {
@@ -3730,74 +3543,6 @@ function resolvePending(s, choice) {
             });
           }
         }
-        break;
-      }
-    case 'SWITCH_RECOVER':
-      {
-        if (choice.charId) {
-          // 步驟1：玩家選了角色，進入選格子步驟
-          const chosen = P.wr.find(c => c.id === choice.charId);
-          if (chosen) {
-            s.pending = { type: 'SWITCH_SLOT_SELECT', pIdx: p.pIdx, charId: choice.charId, charName: chosen.def.name };
-          }
-        } else {
-          // 跳過
-          if (!s.pending && s.attackCtx && s.attackCtx.resumeAfterPending === 'counter') return attackCounterStep(s);
-          if (!s.pending && s.phase === 'attack') triggerOppAtkPhase(s);
-        }
-        break;
-      }
-    case 'SWITCH_SLOT_SELECT':
-      {
-        // 步驟2：玩家選了格子，執行放置
-        if (choice.id != null && choice.slot != null) {
-          const idx = P.wr.findIndex(c => c.id === choice.id);
-          if (idx >= 0) {
-            const c = P.wr.splice(idx, 1)[0];
-            const inst = { ...c, state: 'rest', autoBuff: null, justEncored: false, zeroDestroying: false };
-            P.stage[choice.slot] = inst;
-            s.log.push(`掣：${c.def.name} REST 放入舞台格${choice.slot}。`);
-            s = checkZeroPowerDestroy(s);
-          }
-        }
-        if (!s.pending && s.attackCtx && s.attackCtx.resumeAfterPending === 'counter') return attackCounterStep(s);
-        if (!s.pending && s.phase === 'attack') triggerOppAtkPhase(s);
-        break;
-      }
-    case 'WIND_SELECT':
-      {
-        // choice.id = 要彈回的對方角色id
-        const oppP = s.players[1 - p.pIdx];
-        if (choice.id) {
-          const slot = oppP.stage.findIndex(c => c && c.id === choice.id);
-          if (slot >= 0) {
-            const c = oppP.stage[slot];
-            oppP.stage[slot] = null;
-            oppP.hand.push(c);
-            s.log.push(`風觸發：${c.def.name} 彈回對方手牌。`);
-          }
-        }
-        break;
-      }
-    case 'SELECT_RECOVER':
-      {
-        // choice.id = 選中的角色id, choice.toStock = true/false
-        if (choice.id) {
-          const idx = P.wr.findIndex(c => c.id === choice.id);
-          if (idx >= 0) {
-            const c = P.wr.splice(idx, 1)[0];
-            if (choice.toStock) {
-              P.stock.push(c);
-              s.log.push(`選觸發：${c.def.name} 放入股票。`);
-            } else {
-              P.hand.push(c);
-              s.log.push(`選觸發：${c.def.name} 加入手牌。`);
-              if (!s.banners) s.banners = [];
-              s.banners.push({ kind: 'recover', title: '選觸發·回收角色', cardKeys: [c.key], confirmBy: 'opp', byPIdx: p.pIdx, big: true });
-            }
-          }
-        }
-        s = applyAliceChoiceBuff(s, p.pIdx);
         break;
       }
     case 'CONCENTRATE_SEARCH':
@@ -6069,7 +5814,7 @@ function DeckBuilder(props) {
       return e('div', {
         style: { height: 10, borderRadius: 4, margin: '3px 0', background: `repeating-linear-gradient(45deg,${col},${col} 5px,${dark} 5px,${dark} 10px)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }
       }, e('span', { style: { color: '#fff', fontSize: 9, fontWeight: 900, letterSpacing: 2, textShadow: '0 1px 2px rgba(0,0,0,.7)' } },
-        'CX ' + trigName(c.trig)));
+        'CX ' + (c.trig === TRIG.STANDBY ? '門' : c.trig === TRIG.GATE ? '閘' : c.trig === TRIG.CHOICE ? 'CHOICE' : '')));
     })(), e('div', {
       style: {
         fontSize: 11,
@@ -6956,4 +6701,15 @@ function SandboxPanel(props) {
     }, zone === 'deck' ? '填滿' : '清'));
   })), cardPicker);
 }
-module.exports = { gameReducerInner, gameReducer, checkZeroPowerDestroy, attackAfterConfirm, declareAttack, refreshNow, buildDeck, DEFS, TRIG, nm, trigName, calcPower, continuousFromStage, continuousFromCX, runAttackFx, selfEncoreCandidates, canSelfEncore, selfEncoreLabel, doSwitch, doWind, doBrick, doBook, doSelect, initialState, resolvePending, checkLevelUp, dealBattleDamage, endTurn, encoreCost, pb, startPhaseChain, activateConcentrate, makeSandboxState, makeRandomDeckList, deckPairsToKeys, mkCard, clockThresholdFor, deckMapToList, BUILTIN_DECKS, loseLevelFor, saveDecks, loadDecks, attackBattleStep, processEncore };
+
+
+module.exports = {
+  DEFS, TRIG, initialState, gameReducer, resolvePending,
+  checkLevelUp, dealBattleDamage, makeSandboxState, mkCard,
+  clockThresholdFor, deckMapToList, BUILTIN_DECKS, loseLevelFor,
+  saveDecks, loadDecks, attackBattleStep, processEncore,
+  checkZeroPowerDestroy, gameReducerInner, attackAfterConfirm, declareAttack,
+  endTurn, encoreCost, pb, startPhaseChain,
+  makeRandomDeckList, deckPairsToKeys, activateConcentrate, calcPower, runAttackFx,
+  canSelfEncore
+};

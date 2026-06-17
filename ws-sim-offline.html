@@ -1038,6 +1038,28 @@ const DEFS = {
     cont: null,
     fx: 'CX_ON_PLAY_SWITCH',
     text: '【自】此牌出場時，可從控室選 1 隻等級 ≤ 自身等級+1 的角色，REST 放入任意舞台格。（掣觸發：同效果，另 +1 魂）'
+  },
+
+  // D 書 (BOOK) ─ 藍
+  thp_cx_book: {
+    name: '「東方の書」',
+    type: 'CX', rarity: 'CR', 作品: '東方Project',
+    color: 'blue', level: 0, cost: 0, power: 0, soul: 1,
+    trig: TRIG.BOOK,
+    cont: 'ALL_P1000_S1',
+    fx: null,
+    text: '【自】觸發時，抽 1 張牌。（全體 +1000 力量 +1 魂）'
+  },
+
+  // 058 疾風「風神少女」 ─ DSOUL 觸發 + 置場時發動效果
+  thp_058: {
+    name: '疾風「風神少女」',
+    type: 'CHAR', rarity: 'R', 作品: '東方Project',
+    color: 'green', level: 1, cost: 1, power: 5500, soul: 1,
+    trig: TRIG.DSOUL,
+    cont: null,
+    fx: 'ON_PLAY_WR_L1MINUS_STOCK',
+    text: '【自】此牌出場時，可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。若這樣做，本回合己方全體角色 +1 魂。'
   }
 };
 
@@ -1760,8 +1782,8 @@ function gameReducerInner(state, action) {
           s.log.push('本回合已打過高潮卡。');
           return s;
         }
-        // CX 顏色規則：即使0費也要 Level區或Clock區有同色
-        {
+        // CX 顏色規則：即使0費也要 Level區或Clock區有同色（沙盒略過）
+        if (!s.sandbox) {
           const color = card.def.color;
           const hasColor = P.level.some(c => c.def.color === color) || P.clock.some(c => c.def.color === color);
           if (!hasColor) {
@@ -2556,6 +2578,37 @@ function applyCIP(s, pIdx, slot, card) {
         // NPC：不發動（效果搜索對NPC幫助有限，且需要消耗）
         s.log.push(`${card.def.name}：NPC 略過看牌效果。`);
       }
+    }
+  }
+
+  // 058 疾風「風神少女」：從控室選 ≤Lv1 角色放錢區，全體+1魂
+  if (cipHas('ON_PLAY_WR_L1MINUS_STOCK') && !s.pending) {
+    const cands = P.wr.filter(c => c.def.type === 'CHAR' && c.def.level <= 1);
+    if (cands.length > 0) {
+      if (isHuman(s, pIdx)) {
+        s.pending = {
+          type: 'WR_L1MINUS_STOCK_ASK',
+          pIdx,
+          cards: cands,
+          cardName: card.def.name
+        };
+      } else {
+        // NPC：取第一張候選
+        const pick = cands[0];
+        const wrIdx = P.wr.findIndex(c => c.id === pick.id);
+        P.wr.splice(wrIdx, 1);
+        P.stock.push(pick);
+        s.log.push(`${card.def.name}：${pick.def.name} 入錢區，全體+1魂。`);
+        // 全體+1魂（本回合 autoBuff）
+        for (let i = 0; i < 5; i++) {
+          if (P.stage[i]) {
+            P.stage[i].autoBuff = P.stage[i].autoBuff || { power: 0, soul: 0 };
+            P.stage[i].autoBuff.soul += 1;
+          }
+        }
+      }
+    } else {
+      s.log.push(`${card.def.name}：控室無 ≤Lv1 角色，效果略過。`);
     }
   }
 
@@ -3457,15 +3510,22 @@ function doSelect(s, pIdx, cxCard) {
 // F 磚：觸發時 CX 送手牌（非控室）；NPC 選擇性把牌庫頂放股票
 function doBrick(s, pIdx, cxCard) {
   const P = s.players[pIdx];
-  // CX 送手牌
+  // 觸發步驟已把 trigCard 放入 stock；磚規則是 CX 上手而非入錢，要從 stock 移回手牌
+  const stockIdx = P.stock.findIndex(c => c.id === cxCard.id);
+  if (stockIdx >= 0) P.stock.splice(stockIdx, 1);
   P.hand.push(cxCard);
   s.log.push(`${P.name} 磚觸發：${cxCard.def.name} 加入手牌。`);
-  // 磚：可選牌庫頂→股票（人類版：自動執行，簡化）
+  // 可選：牌庫頂→錢區（玩家選擇）
   if (P.deck.length > 0) {
-    const top = P.deck.pop();
-    P.stock.push(top);
-    s.log.push(`${P.name} 磚觸發：${top.def.name} 放入股票。`);
-    if (P.deck.length === 0) s = refreshNow(s, pIdx);
+    if (isHuman(s, pIdx)) {
+      s.pending = { type: 'BRICK_STOCK_ASK', pIdx };
+    } else {
+      // NPC：選擇放入錢區
+      const top = P.deck.pop();
+      P.stock.push(top);
+      s.log.push(`${P.name} 磚觸發：${top.def.name} 放入錢區。`);
+      if (P.deck.length === 0) s = refreshNow(s, pIdx);
+    }
   }
   return s;
 }
@@ -4112,7 +4172,7 @@ function resolvePending(s, choice) {
           // 步驟1：玩家選了角色，進入選格子步驟
           const chosen = P.wr.find(c => c.id === choice.charId);
           if (chosen) {
-            s.pending = { type: 'SWITCH_SLOT_SELECT', pIdx: p.pIdx, charId: choice.charId, charName: chosen.def.name };
+            s.pending = { type: 'SWITCH_SLOT_SELECT', pIdx: p.pIdx, charId: choice.charId, charName: chosen.def.name, slots: [0,1,2,3,4] };
           }
         } else {
           // 跳過
@@ -4153,6 +4213,22 @@ function resolvePending(s, choice) {
         }
         break;
       }
+    case 'BRICK_STOCK_ASK':
+      {
+        if (choice.yes) {
+          const _bP = s.players[p.pIdx];
+          if (_bP.deck.length > 0) {
+            const top = _bP.deck.pop();
+            _bP.stock.push(top);
+            s.log.push(`${_bP.name} 磚觸發：${top.def.name} 放入錢區。`);
+            if (_bP.deck.length === 0) s = refreshNow(s, p.pIdx);
+          }
+        } else {
+          s.log.push(`${s.players[p.pIdx].name} 磚觸發：選擇不放錢區。`);
+        }
+        if (!s.pending && s.attackCtx && s.attackCtx.resumeAfterPending === 'counter') return attackCounterStep(s);
+        break;
+      }
     case 'SELECT_RECOVER':
       {
         // choice.id = 選中的角色id, choice.toStock = true/false
@@ -4162,7 +4238,7 @@ function resolvePending(s, choice) {
             const c = P.wr.splice(idx, 1)[0];
             if (choice.toStock) {
               P.stock.push(c);
-              s.log.push(`選觸發：${c.def.name} 放入股票。`);
+              s.log.push(`選觸發：${c.def.name} 放入錢區。`);
             } else {
               P.hand.push(c);
               s.log.push(`選觸發：${c.def.name} 加入手牌。`);
@@ -4172,6 +4248,27 @@ function resolvePending(s, choice) {
           }
         }
         s = applyAliceChoiceBuff(s, p.pIdx);
+        break;
+      }
+    case 'WR_L1MINUS_STOCK_ASK':
+      {
+        // choice.id = 選中角色id，或 undefined 表示略過
+        if (choice.id) {
+          const wrIdx = P.wr.findIndex(c => c.id === choice.id);
+          if (wrIdx >= 0) {
+            const c = P.wr.splice(wrIdx, 1)[0];
+            P.stock.push(c);
+            s.log.push(`${p.cardName}：${c.def.name} 入錢區，全體+1魂。`);
+            for (let i = 0; i < 5; i++) {
+              if (P.stage[i]) {
+                P.stage[i].autoBuff = P.stage[i].autoBuff || { power: 0, soul: 0 };
+                P.stage[i].autoBuff.soul += 1;
+              }
+            }
+          }
+        } else {
+          s.log.push(`${p.cardName}：略過效果。`);
+        }
         break;
       }
     case 'CONCENTRATE_SEARCH':
@@ -6443,7 +6540,7 @@ function DeckBuilder(props) {
       return e('div', {
         style: { height: 10, borderRadius: 4, margin: '3px 0', background: `repeating-linear-gradient(45deg,${col},${col} 5px,${dark} 5px,${dark} 10px)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }
       }, e('span', { style: { color: '#fff', fontSize: 9, fontWeight: 900, letterSpacing: 2, textShadow: '0 1px 2px rgba(0,0,0,.7)' } },
-        'CX ' + trigName(c.trig)));
+        'CX ' + trigName(c.trig) + ({ [TRIG.GATE]:' +1魂', [TRIG.SWITCH]:' +1魂', [TRIG.WIND]:' +1魂' }[c.trig] || '')));
     })(), e('div', {
       style: {
         fontSize: 11,
@@ -7408,7 +7505,8 @@ function CardFace({
       fontWeight: 700
     }
   }, c.type === 'CX' ? `CX ${trigName(c.trig)}` : `L${c.level} C${c.cost}`, (() => {
-    const ts = c.tsoul || (c.type === 'CX' && c.trig === TRIG.GATE ? 1 : 0);
+    const TRIG_SOUL_BONUS = { [TRIG.GATE]: 1, [TRIG.SWITCH]: 1, [TRIG.WIND]: 1 };
+    const ts = c.tsoul || TRIG_SOUL_BONUS[c.trig] || 0;
     return ts > 0 ? /*#__PURE__*/React.createElement("span", {
       style: {
         color: '#ffd966',
@@ -9261,7 +9359,7 @@ function Game({
         marginBottom: 24
       },
       className: "mono"
-    }, "\u5C0D\u6230\u6A21\u64EC\u5668 \u2014 \u898F\u5247\u5F15\u64CE\u539F\u578B v0.3"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5C0D\u6230\u6A21\u64EC\u5668 \u2014 \u898F\u5247\u5F15\u64CE\u539F\u578B v0.4"), /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 24
       }
@@ -9599,6 +9697,11 @@ function Game({
       if (state.pending.otherChars && state.pending.otherChars.includes(slot)) {
         act({ type: 'RESOLVE_PENDING', choice: { pay: true, costSlot: slot } });
       }
+      return;
+    }
+    // SWITCH_SLOT_SELECT：選完角色後直接點舞台格放置（不彈窗）
+    if (state.pending && state.pending.type === 'SWITCH_SLOT_SELECT' && (state.pending.pIdx === myIdx || state.sandbox)) {
+      act({ type: 'RESOLVE_PENDING', choice: { id: state.pending.charId, slot } });
       return;
     }
     if (!yourTurn) return;
@@ -10013,12 +10116,12 @@ function Game({
   }, "\u25E4 ", opp.name, " \xB7\u624B", opp.hand.length, " \u25E5"), /*#__PURE__*/React.createElement(StageRow, {
     state: state,
     pIdx: oppIdx,
-    onSlotClick: state.sandbox && state.pending && (state.pending.type === 'TEWI_SELECT' || state.pending.type === 'ZERO_ENCORE_SELECT' || state.pending.type === 'CHARSEL_BUFF' || state.pending.type === 'SEPTET_CX_COST') && state.pending.pIdx === oppIdx ? onSlotClick : () => {},
+    onSlotClick: state.sandbox && state.pending && (state.pending.type === 'TEWI_SELECT' || state.pending.type === 'ZERO_ENCORE_SELECT' || state.pending.type === 'CHARSEL_BUFF' || state.pending.type === 'SEPTET_CX_COST' || state.pending.type === 'SWITCH_SLOT_SELECT') && state.pending.pIdx === oppIdx ? onSlotClick : () => {},
     sel: null,
     flip: true,
     onInfo: setInfoCard,
     fill: true,
-    highlightSlots: state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending.type === 'CHARSEL_BUFF' ? state.pending.cand : state.pending.type === 'SEPTET_CX_COST' ? state.pending.otherChars : null) || null,
+    highlightSlots: state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending.type === 'CHARSEL_BUFF' ? state.pending.cand : state.pending.type === 'SEPTET_CX_COST' ? state.pending.otherChars : state.pending.type === 'SWITCH_SLOT_SELECT' ? state.pending.slots : null) || null,
     selStage: state.sandbox && state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === oppIdx ? tewiSel : null
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -10032,7 +10135,7 @@ function Game({
     sel: sel,
     onInfo: setInfoCard,
     fill: true,
-    highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'CHARSEL_BUFF' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'SEPTET_CX_COST' && state.pending.pIdx === myIdx ? state.pending.otherChars : null,
+    highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'CHARSEL_BUFF' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'SEPTET_CX_COST' && state.pending.pIdx === myIdx ? state.pending.otherChars : state.pending && state.pending.type === 'SWITCH_SLOT_SELECT' && state.pending.pIdx === myIdx ? state.pending.slots : null,
     selStage: state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? tewiSel : selStage
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -10083,7 +10186,7 @@ function Game({
     kind: "deck",
     P: me,
     zoneRef: el => registerZone('deck' + myIdx, el)
-  }))), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && !modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && state.pending.type !== 'SEPTET_CX_COST' && /*#__PURE__*/React.createElement(PendingModal, {
+  }))), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && !modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && state.pending.type !== 'SEPTET_CX_COST' && state.pending.type !== 'SWITCH_SLOT_SELECT' && /*#__PURE__*/React.createElement(PendingModal, {
     state: state,
     myIdx: myIdx,
     act: a => {
@@ -10091,7 +10194,7 @@ function Game({
       act(a);
     },
     onHide: () => setModalHidden(true)
-  }), state.pending && state.pending.pIdx === myIdx && modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && state.pending.type !== 'SEPTET_CX_COST' && /*#__PURE__*/React.createElement("button", {
+  }), state.pending && state.pending.pIdx === myIdx && modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && state.pending.type !== 'SEPTET_CX_COST' && state.pending.type !== 'SWITCH_SLOT_SELECT' && /*#__PURE__*/React.createElement("button", {
     onClick: () => setModalHidden(false),
     style: {
       position: 'fixed',
@@ -10217,7 +10320,15 @@ function Game({
   ), /*#__PURE__*/React.createElement("button", {
     onClick: () => act({ type: 'RESOLVE_PENDING', choice: {} }),
     style: { ...btnStyle('var(--line)'), padding: '6px 14px', fontSize: 13 }
-  }, '\u8DF3\u904E')), state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' && /*#__PURE__*/React.createElement("div", {
+  }, '\u8DF3\u904E')), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && state.pending.type === 'SWITCH_SLOT_SELECT' && /*#__PURE__*/React.createElement("div", {
+    style: { position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 48, background: 'var(--panel)', border: '1px solid var(--accent)', borderRadius: 10, padding: '10px 18px', display: 'flex', gap: 12, alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,.5)' }
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14 } },
+    '\u63A3\u89F8\u767C\uFF1A', /*#__PURE__*/React.createElement("span", { style: { fontWeight: 700 } }, state.pending.charName),
+    /*#__PURE__*/React.createElement("span", { style: { color: 'var(--ink-dim)', fontSize: 12 } }, '\u3000\u2014\u2014\u3000\u9EDE\u64CA\u821E\u53F0\u4EFB\u610F\u683C\uFF08REST\uFF09\u653E\u7F6E')
+  ), /*#__PURE__*/React.createElement("button", {
+    onClick: () => act({ type: 'RESOLVE_PENDING', choice: {} }),
+    style: { ...btnStyle('var(--line)'), padding: '6px 14px', fontSize: 13 }
+  }, '\u53D6\u6D88')), state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'fixed',
       bottom: 16,
@@ -11228,18 +11339,29 @@ function PendingModal({
     title = '選觸發：從控室選 1 隻有魂圖標的角色';
     const cand = P.wr.filter(c => c.def.type === 'CHAR' && c.def.trig === TRIG.SOUL);
     body = /*#__PURE__*/React.createElement("div", null,
-      /*#__PURE__*/React.createElement("div", { style: { color: 'var(--ink-dim)', fontSize: 12, marginBottom: 8 } }, '選擇後再決定放入手牌或股票'),
+      /*#__PURE__*/React.createElement("div", { style: { color: 'var(--ink-dim)', fontSize: 12, marginBottom: 8 } }, '選擇後再決定放入手牌或錢區'),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
         cand.map(c => /*#__PURE__*/React.createElement("div", { key: c.id, style: { display: 'flex', flexDirection: 'column', gap: 4 } },
           /*#__PURE__*/React.createElement(CardFace, { card: c, hand: true, onClick: null, onInfo: null }),
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 4 } },
             /*#__PURE__*/React.createElement("button", { className: 'btn', onClick: () => choose({ id: c.id, toStock: false }) }, '加手牌'),
-            /*#__PURE__*/React.createElement("button", { className: 'btn', style: { background: 'var(--accent-y)' }, onClick: () => choose({ id: c.id, toStock: true }) }, '放股票')
+            /*#__PURE__*/React.createElement("button", { className: 'btn', style: { background: 'var(--accent-y)' }, onClick: () => choose({ id: c.id, toStock: true }) }, '放錢區')
           )
         )),
         cand.length === 0 && /*#__PURE__*/React.createElement("div", { style: { color: 'var(--ink-dim)' } }, '控室無有魂圖標角色')
       ),
       /*#__PURE__*/React.createElement("button", { className: 'btn', style: { marginTop: 8 }, onClick: () => choose({}) }, '跳過')
+    );
+  } else if (p.type === 'WR_L1MINUS_STOCK_ASK') {
+    title = `${p.cardName}：從控室選 1 隻等級 ≤ 1 的角色放入錢區`;
+    const cand = P.wr.filter(c => c.def.type === 'CHAR' && c.def.level <= 1);
+    body = /*#__PURE__*/React.createElement("div", null,
+      /*#__PURE__*/React.createElement("div", { style: { color: 'var(--ink-dim)', fontSize: 12, marginBottom: 8 } }, '若選擇放入錢區，全體角色本回合 +1 魂'),
+      /*#__PURE__*/React.createElement(CandPick, {
+        cards: cand,
+        onPick: id => choose({ id }),
+        onSkip: () => choose({})
+      })
     );
   } else if (p.type === 'SWITCH_RECOVER') {
     title = '掣觸發：從控室選 1 隻等級 ≤ 自身等級+1 的角色（REST 放入舞台）';
@@ -11267,9 +11389,15 @@ function PendingModal({
       }),
       /*#__PURE__*/React.createElement("button", { className: 'btn', style: { marginTop: 8 }, onClick: () => choose({}) }, '取消')
     );
+  } else if (p.type === 'BRICK_STOCK_ASK') {
+    title = '磚觸發：是否把牌庫頂1張放入錢區？';
+    body = /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 12 } },
+      /*#__PURE__*/React.createElement("button", { className: 'btn', style: { background: 'var(--accent)' }, onClick: () => choose({ yes: true }) }, '放入錢區'),
+      /*#__PURE__*/React.createElement("button", { className: 'btn', onClick: () => choose({ yes: false }) }, '不放')
+    );
   } else if (p.type === 'WIND_SELECT') {
     title = '風觸發：選擇要彈回對方手牌的角色';
-    const opp = gs.players[1 - p.pIdx];
+    const opp = state.players[1 - p.pIdx];
     const cand = opp.stage.filter(Boolean);
     body = /*#__PURE__*/React.createElement(CandPick, {
       cards: cand,
