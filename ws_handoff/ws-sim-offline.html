@@ -393,7 +393,8 @@ const TRIG = {
   SOUL: 'soul',
   STANDBY: 'standby',
   // 紅門
-  GATE: 'gate' // 藍閘
+  GATE: 'gate', // 藍閘
+  CHOICE: 'choice' // 選擇（choice/チョイス）：觸發時從控室選1張符合條件的卡加入手牌
 };
 
 // ---- CX 名稱 ----
@@ -869,7 +870,7 @@ const DEFS = {
     trig: TRIG.SOUL,
     traits: ['幻想郷', '魔法の森'],
     fxList: ['SUPPORT_FRONT_LEVEL500', 'TRIGGER_GATE_BUFF_GENSO_2000'],
-    text: '【永】 応援對前方角色全部 +（該角色等級×500）力量。\n【自】 自方觸發為「門」的卡觸發時，選擇 1 隻我方《幻想郷》角色，當回合 +2000 力量。'
+    text: '【永】 応援對前方角色全部 +（該角色等級×500）力量。\n【自】 自方觸發為「choice」的卡觸發時，選擇 1 隻我方《幻想郷》角色，當回合 +2000 力量。'
   },
   thp_021_mystia: {
     name: 'ミスティア・ローレライ＆幽谷響子',
@@ -945,6 +946,21 @@ const DEFS = {
     traits: ['幻想郷', '紅魔館'],
     fx: 'CIP_OPT_LOOK7_GENSO_SELF1500',
     text: '【自】 ［(1) 棄 1 張手牌］ 這張卡從手牌放上舞台時，可選擇支付：看牌庫頂最多 7 張，可選 1 張《幻想郷》角色展示後加入手牌，其餘進控室；當回合 +1500 力量。'
+  },
+  // ===== 東方Project CX =====
+  thp_cx_standby_hakurei: {
+    name: '博麗の巫女',
+    type: 'CX',
+    rarity: 'CR',
+    作品: '東方Project',
+    color: 'red',
+    level: 0,
+    cost: 0,
+    power: 0,
+    soul: 1,
+    trig: TRIG.STANDBY,
+    cont: 'ALL_P1000_S1',
+    text: '【永】全體角色 +1000 力量、+1 魂。（門觸發：可從控室選 1 張角色加入手牌）'
   }
 };
 
@@ -1142,7 +1158,24 @@ function makeSandboxState(names, work) {
   return s;
 }
 // 沙盒「對手 default 場面」：用指定作品的卡擺一套標準對手場
-//  等級1、錢1、傷害3隨機、場上5隻隨機L1角色、控室10(2CX+8角色)
+//  等級1、錢10、傷害3隨機、場上5隻隨機L1角色、控室10(2CX+8角色)
+function _pick4ColorCards(chars) {
+  // 從 chars 各色取1張，再隨機補2張，共6張打亂 → 前3給等級區，後3給傷害區
+  const colors = ['yellow', 'red', 'blue', 'green'];
+  const pick = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+  const byColor = c => colors.map(col => pick(chars.filter(k => DEFS[k].color === col))).filter(Boolean);
+  const base = byColor(chars); // 最多4張（各色1）
+  // 不足4色時補隨機
+  while (base.length < 4) base.push(pick(chars));
+  // 補2張隨機
+  base.push(pick(chars), pick(chars));
+  // Fisher-Yates shuffle
+  for (let i = base.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [base[i], base[j]] = [base[j], base[i]];
+  }
+  return base.filter(Boolean).slice(0, 6);
+}
 function sandboxDefaultOpponent(s, work) {
   work = work || s.sandboxWork || '初始';
   const P = s.players[1];
@@ -1161,16 +1194,13 @@ function sandboxDefaultOpponent(s, work) {
   P.wr = [];
   P.cx = [];
   P.resolution = [];
-  // 等級區1張、錢1張（隨機角色）
-  let c;
-  c = mk(pick(chars));
-  if (c) P.level.push(c);
-  c = mk(pick(chars));
-  if (c) P.stock.push(c);
-  // 傷害區3張隨機
-  for (let i = 0; i < 3; i++) {
-    c = mk(pick(chars));
-    if (c) P.clock.push(c);
+  // 等級區3張、傷害區3張（共6張，集齊4色）、錢10張
+  const sixKeys = _pick4ColorCards(chars);
+  sixKeys.slice(0, 3).forEach(k => P.level.push(mk(k)));
+  sixKeys.slice(3, 6).forEach(k => P.clock.push(mk(k)));
+  for (let i = 0; i < 10; i++) {
+    const c = mk(pick(chars));
+    if (c) P.stock.push(c);
   }
   // 場上5隻隨機 L1 角色（沒有 L1 就用任意角色）
   for (let i = 0; i < 5; i++) {
@@ -1185,6 +1215,26 @@ function sandboxDefaultOpponent(s, work) {
   for (let i = 0; i < 8; i++) {
     c = mk(pick(chars));
     if (c) P.wr.push(c);
+  }
+  return s;
+}
+// 沙盒「我方 default」：只設等級區3張、錢10張、時計3張（共6張集齊4色），其餘不動
+function sandboxDefaultMe(s, work) {
+  work = work || s.sandboxWork || '初始';
+  const P = s.players[0];
+  const pool = Object.keys(DEFS).filter(k => (DEFS[k]['作品'] || '初始') === work);
+  const chars = pool.filter(k => DEFS[k].type === 'CHAR');
+  const pick = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+  const mk = k => k ? mkCard(k, 'stand') : null;
+  P.level = [];
+  P.stock = [];
+  P.clock = [];
+  const sixKeys = _pick4ColorCards(chars);
+  sixKeys.slice(0, 3).forEach(k => P.level.push(mk(k)));
+  sixKeys.slice(3, 6).forEach(k => P.clock.push(mk(k)));
+  for (let i = 0; i < 10; i++) {
+    const c = mk(pick(chars));
+    if (c) P.stock.push(c);
   }
   return s;
 }
@@ -1443,6 +1493,8 @@ function gameReducerInner(state, action) {
           P.deck = shuffle(buildDeck(dl.length ? dl : null));
         } else if (op === 'defaultOpponent') {
           sandboxDefaultOpponent(s, s.sandboxWork);
+        } else if (op === 'defaultMe') {
+          sandboxDefaultMe(s, s.sandboxWork);
         } else if (op === 'addMany') {
           // 一次加入多張卡到某 zone（多選確定）。action.keys = [key,...]
           (action.keys || []).forEach(k => {
@@ -2280,6 +2332,13 @@ function applyCIP(s, pIdx, slot, card) {
     if (sflip.length > 0) {
       if (!s.banners) s.banners = [];
       s.banners.push({
+        kind: 'reveal',
+        title: `${card.def.name} 出場`,
+        cardKeys: [card.key],
+        dur: 1000,
+        byPIdx: pIdx
+      });
+      s.banners.push({
         kind: 'flip',
         stagingTitle: '偵察兵·碌2',
         title: anyCX ? '碌中CX，橫置' : '碌2完成',
@@ -2378,6 +2437,13 @@ function applyCIP(s, pIdx, slot, card) {
     s.log.push(`🔴 ${card.def.name}：碌${milled.length}張，其中${gensoN}隻幻想郷，當回合 +${gensoN*1000}。`);
     if (milled.length > 0) {
       if (!s.banners) s.banners = [];
+      s.banners.push({
+        kind: 'reveal',
+        title: `${card.def.name} 出場`,
+        cardKeys: [card.key],
+        dur: 1000,
+        byPIdx: pIdx
+      });
       s.banners.push({
         kind: 'flip',
         stagingTitle: `${card.def.name}·碌2`,
@@ -2560,9 +2626,11 @@ function runAttackFx(s, ctx) {
     if (!s.banners) s.banners = [];
     s.banners.push({
       kind: 'reveal',
-      title: `椛·看牌庫底`,
+      title: `椛·看雙方牌庫底`,
       subtitle: `自方：${myBot ? myBot.def.name : '無'} ／ 對方：${oppBot ? oppBot.def.name : '無'}`,
-      dur: 2000,
+      cardKeys: [myBot, oppBot].filter(Boolean).map(c => c.key),
+      dur: 5000,
+      confirmBy: 'attacker',
       byPIdx: ctx.aPIdx
     });
   }
@@ -2873,6 +2941,7 @@ function attackTriggerStep(s) {
     s.log.push(trigMsg);
     if (trigCard.def.trig === TRIG.STANDBY) s = doStandby(s, ctx.aPIdx, trigCard);
     if (trigCard.def.trig === TRIG.GATE) s = doGate(s, ctx.aPIdx, trigCard);
+    if (trigCard.def.trig === TRIG.CHOICE) s = doChoice(s, ctx.aPIdx, trigCard);
   }
   ctx.bonusSoul = bonusSoul;
   // 有 pending(門/閘需玩家選)就等，否則進 counter
@@ -3200,22 +3269,53 @@ function doStandby(s, pIdx, cxCard) {
   }
   return s;
 }
-// アリス門觸發加成：觸發方場上有 TRIGGER_GATE_BUFF_GENSO_2000 時，選1隻幻想郷角色 +2000
-function applyAliceGateBuff(s, pIdx) {
+// アリス choice觸發加成：觸發方場上有 TRIGGER_GATE_BUFF_GENSO_2000 時，選1隻幻想郷角色 +2000
+function applyAliceChoiceBuff(s, pIdx) {
   const P = s.players[pIdx];
   const aliceOnStage = P.stage.some(c => c && (c.def.fxList || (c.def.fx ? [c.def.fx] : [])).includes('TRIGGER_GATE_BUFF_GENSO_2000'));
   if (!aliceOnStage) return s;
   const cands = [0,1,2,3,4].filter(i => P.stage[i] && hasTrait(P.stage[i], '幻想郷'));
   if (cands.length === 0) return s;
   if (isHuman(s, pIdx)) {
-    s.pending = { type: 'CHARSEL_BUFF', pIdx, amount: 2000, cand: cands, source: 'アリス·門觸發', filterGensokyo: true };
+    s.pending = { type: 'CHARSEL_BUFF', pIdx, amount: 2000, cand: cands, source: 'アリス·choice觸發', filterGensokyo: true };
   } else {
     const best = cands.reduce((a, b) => calcPower(s, pIdx, a) >= calcPower(s, pIdx, b) ? a : b);
     const bc = P.stage[best];
     bc.autoBuff = bc.autoBuff || { power: 0, soul: 0 };
     bc.autoBuff.power += 2000;
-    s.log.push(`🟡 アリス門觸發：${bc.def.name} 當回合 +2000。`);
+    s.log.push(`🟡 アリス choice觸發：${bc.def.name} 當回合 +2000。`);
   }
+  return s;
+}
+// choice CX 觸發：從控室選1張符合條件的角色加入手牌（類似門，但可由CX條件自訂）
+function doChoice(s, pIdx, cxCard) {
+  const P = s.players[pIdx];
+  const cands = P.wr.filter(c => c.def.type === 'CHAR');
+  if (cands.length === 0) {
+    s.log.push(`${P.name} choice：控室無角色可回收。`);
+    s = applyAliceChoiceBuff(s, pIdx);
+    return s;
+  }
+  if (isHuman(s, pIdx)) {
+    s.pending = { type: 'CHOICE_RECOVER', pIdx };
+    return s;
+  }
+  // NPC：優先出得起的角色，否則最高power
+  cands.sort((a, b) => {
+    const ap = a.def.level <= P.level.length && P.stock.length >= a.def.cost ? 1 : 0;
+    const bp = b.def.level <= P.level.length && P.stock.length >= b.def.cost ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return b.def.power - a.def.power;
+  });
+  const cand = cands[0];
+  if (cand) {
+    P.wr = P.wr.filter(c => c.id !== cand.id);
+    P.hand.push(cand);
+    s.log.push(`${P.name} choice：${cand.def.name} 回到手牌。`);
+    if (!s.banners) s.banners = [];
+    s.banners.push({ kind: 'recover', title: 'Choice·回收角色', cardKeys: [cand.key], confirmBy: 'opp', byPIdx: pIdx, big: true });
+  }
+  s = applyAliceChoiceBuff(s, pIdx);
   return s;
 }
 function doGate(s, pIdx, cxCard) {
@@ -3239,8 +3339,6 @@ function doGate(s, pIdx, cxCard) {
       big: true
     });
   }
-  // NPC：立即處理 Alice 門觸發加成
-  s = applyAliceGateBuff(s, pIdx);
   return s;
 }
 function recoverInitialFromWR(s, pIdx, attacker) {
@@ -3756,6 +3854,28 @@ function resolvePending(s, choice) {
         }
         break;
       }
+    case 'CHOICE_RECOVER':
+      {
+        if (choice.id) {
+          const idx = P.wr.findIndex(c => c.id === choice.id);
+          if (idx >= 0) {
+            const c = P.wr.splice(idx, 1)[0];
+            P.hand.push(c);
+            s.log.push(`Choice：${c.def.name} 回到手牌。`);
+            if (!s.banners) s.banners = [];
+            s.banners.push({
+              kind: 'recover',
+              title: 'Choice·回收角色',
+              cardKeys: [c.key],
+              confirmBy: 'opp',
+              byPIdx: p.pIdx,
+              big: true
+            });
+          }
+        }
+        s = applyAliceChoiceBuff(s, p.pIdx);
+        break;
+      }
     case 'GATE':
       {
         if (choice.id) {
@@ -3775,8 +3895,6 @@ function resolvePending(s, choice) {
             });
           }
         }
-        // 閘結算後：檢查アリス門觸發加成（若有則 pending，否則自動續接 counter）
-        s = applyAliceGateBuff(s, p.pIdx);
         break;
       }
     case 'RECOVER_INITIAL':
@@ -4950,7 +5068,7 @@ const FX_KEYWORD = {
   SUPPORT_FRONT_FLAT_500: '応援·前方+500',
   SUPPORT_FRONT_FLAT_1000: '応援·前方+1000',
   SUPPORT_FRONT_LEVEL500: '応援·前方+lv×500',
-  TRIGGER_GATE_BUFF_GENSO_2000: '觸發·門觸發幻想郷+2000',
+  TRIGGER_GATE_BUFF_GENSO_2000: '觸發·choice觸發幻想郷+2000',
   ON_CX_PLACED_COST_CHAR_LOOK4_GENSO: '自·CX入場棄角色看4取幻想郷',
   OPP_ATKPHASE_CX_COST_OPP_SOUL4: '自·對方攻擊開始棄CX選對手+4魂',
   NO_COLOR_RESTRICTION: '永·無色限制'
@@ -6768,7 +6886,15 @@ function SandboxPanel(props) {
     }),
     style: miniBtn('var(--accent)'),
     title: '對手用初始/該系列卡擺一套標準場（等級1+錢1+傷害3+場上5隻L1+控室2CX8角色）'
-  }, '對手default'), e('span', {
+  }, '對手default'), e('button', {
+    onClick: () => act({
+      type: 'SANDBOX_OP',
+      pIdx: 0,
+      op: 'defaultMe'
+    }),
+    style: miniBtn('var(--blue)'),
+    title: '我方設定等級區1張、錢10張、時計3張（手牌/場/控室/牌庫不變）'
+  }, '我方default'), e('span', {
     style: {
       ...lbl,
       marginLeft: 10
@@ -9198,6 +9324,20 @@ function Game({
       }
       return;
     }
+    // CHARSEL_BUFF：直接點擊高亮角色加力（不彈窗）
+    if (state.pending && state.pending.type === 'CHARSEL_BUFF' && (state.pending.pIdx === myIdx || state.sandbox)) {
+      if (state.pending.cand && state.pending.cand.includes(slot)) {
+        act({ type: 'RESOLVE_PENDING', choice: { slot } });
+      }
+      return;
+    }
+    // SEPTET_CX_COST：直接點擊高亮角色作費用（不彈窗）
+    if (state.pending && state.pending.type === 'SEPTET_CX_COST' && (state.pending.pIdx === myIdx || state.sandbox)) {
+      if (state.pending.otherChars && state.pending.otherChars.includes(slot)) {
+        act({ type: 'RESOLVE_PENDING', choice: { pay: true, costSlot: slot } });
+      }
+      return;
+    }
     if (!yourTurn) return;
 
     // attack phase：點前列直立角色攻擊
@@ -9612,12 +9752,12 @@ function Game({
   }, "\u25E4 ", opp.name, " \xB7\u624B", opp.hand.length, " \u25E5"), /*#__PURE__*/React.createElement(StageRow, {
     state: state,
     pIdx: oppIdx,
-    onSlotClick: state.sandbox && state.pending && (state.pending.type === 'TEWI_SELECT' || state.pending.type === 'ZERO_ENCORE_SELECT') && state.pending.pIdx === oppIdx ? onSlotClick : () => {},
+    onSlotClick: state.sandbox && state.pending && (state.pending.type === 'TEWI_SELECT' || state.pending.type === 'ZERO_ENCORE_SELECT' || state.pending.type === 'CHARSEL_BUFF' || state.pending.type === 'SEPTET_CX_COST') && state.pending.pIdx === oppIdx ? onSlotClick : () => {},
     sel: null,
     flip: true,
     onInfo: setInfoCard,
     fill: true,
-    highlightSlots: state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : null) || null,
+    highlightSlots: state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending.type === 'CHARSEL_BUFF' ? state.pending.cand : state.pending.type === 'SEPTET_CX_COST' ? state.pending.otherChars : null) || null,
     selStage: state.sandbox && state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === oppIdx ? tewiSel : null
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9631,7 +9771,7 @@ function Game({
     sel: sel,
     onInfo: setInfoCard,
     fill: true,
-    highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : null,
+    highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'CHARSEL_BUFF' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'SEPTET_CX_COST' && state.pending.pIdx === myIdx ? state.pending.otherChars : null,
     selStage: state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? tewiSel : selStage
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9682,7 +9822,7 @@ function Game({
     kind: "deck",
     P: me,
     zoneRef: el => registerZone('deck' + myIdx, el)
-  }))), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && !modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && /*#__PURE__*/React.createElement(PendingModal, {
+  }))), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && !modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && state.pending.type !== 'SEPTET_CX_COST' && /*#__PURE__*/React.createElement(PendingModal, {
     state: state,
     myIdx: myIdx,
     act: a => {
@@ -9690,7 +9830,7 @@ function Game({
       act(a);
     },
     onHide: () => setModalHidden(true)
-  }), state.pending && state.pending.pIdx === myIdx && modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && /*#__PURE__*/React.createElement("button", {
+  }), state.pending && state.pending.pIdx === myIdx && modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && state.pending.type !== 'SEPTET_CX_COST' && /*#__PURE__*/React.createElement("button", {
     onClick: () => setModalHidden(false),
     style: {
       position: 'fixed',
@@ -9772,7 +9912,49 @@ function Game({
       padding: '6px 14px',
       fontSize: 13
     }
-  }, "\u4E0D\u79FB\u52D5")), state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' && /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0D\u79FB\u52D5")), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && state.pending.type === 'CHARSEL_BUFF' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      bottom: 16,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 48,
+      background: 'var(--panel)',
+      border: '1px solid var(--accent)',
+      borderRadius: 10,
+      padding: '10px 18px',
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      boxShadow: '0 4px 20px rgba(0,0,0,.5)'
+    }
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14 } },
+    state.pending.source, '\uFF1A\u9EDE', /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent)' } }, '\u9AD8\u4EAE'), '\u7684\u89D2\u8272\uFF0C\u7576\u56DE\u5408 +', state.pending.amount, ' \u529B\u91CF'
+  ), /*#__PURE__*/React.createElement("button", {
+    onClick: () => act({ type: 'RESOLVE_PENDING', choice: {} }),
+    style: { ...btnStyle('var(--line)'), padding: '6px 14px', fontSize: 13 }
+  }, '\u8DF3\u904E')), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && state.pending.type === 'SEPTET_CX_COST' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      bottom: 16,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 48,
+      background: 'var(--panel)',
+      border: '1px solid var(--accent)',
+      borderRadius: 10,
+      padding: '10px 18px',
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      boxShadow: '0 4px 20px rgba(0,0,0,.5)'
+    }
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14 } },
+    '\u30BB\u30D7\u30C6\u30C3\u30C8\u2462\uFF1A\u9EDE', /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent)' } }, '\u9AD8\u4EAE'), '\u7684\u5176\u4ED6\u8266\u4E0A\u89D2\u8272\u4F5C\u8CBB\u7528'
+  ), /*#__PURE__*/React.createElement("button", {
+    onClick: () => act({ type: 'RESOLVE_PENDING', choice: {} }),
+    style: { ...btnStyle('var(--line)'), padding: '6px 14px', fontSize: 13 }
+  }, '\u8DF3\u904E')), state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'fixed',
       bottom: 16,
@@ -10720,9 +10902,15 @@ function PendingModal({
     const cand = P.wr.filter(c => c.def.type === 'CHAR');
     body = /*#__PURE__*/React.createElement(CandPick, {
       cards: cand,
-      onPick: id => choose({
-        id
-      }),
+      onPick: id => choose({ id }),
+      onSkip: () => choose({})
+    });
+  } else if (p.type === 'CHOICE_RECOVER') {
+    title = 'Choice：從控室選1張角色加入手牌';
+    const cand = P.wr.filter(c => c.def.type === 'CHAR');
+    body = /*#__PURE__*/React.createElement(CandPick, {
+      cards: cand,
+      onPick: id => choose({ id }),
       onSkip: () => choose({})
     });
   } else if (p.type === 'GATE') {
@@ -10922,9 +11110,9 @@ function PendingModal({
     // 棄1張手牌
     title = p.type === 'DISCARD_HAND_FOR_LOOK' ? `${p.cardName}：選1張手牌棄掉` : '選1張手牌棄掉';
     body = /*#__PURE__*/React.createElement("div", null,
-      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } },
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, maxHeight: '50vh', overflowY: 'auto' } },
         P.hand.map((c2, hi) => /*#__PURE__*/React.createElement("div", { key: c2.id, onClick: () => setSel(hi), style: { outline: sel === hi ? '3px solid var(--red,#e55)' : 'none', borderRadius: 6, cursor: 'pointer' } },
-          /*#__PURE__*/React.createElement(CardFace, { card: c2, fill: true })))
+          /*#__PURE__*/React.createElement(CardFace, { card: c2, hand: true })))
       ),
       /*#__PURE__*/React.createElement("button", { onClick: () => { if (sel != null) { choose({ id: P.hand[sel].id }); setSel(null); } }, disabled: sel == null, style: btnStyle(sel != null ? 'var(--red,#e55)' : 'var(--line)') }, '棄牌確認')
     );
@@ -10952,9 +11140,9 @@ function PendingModal({
     const _cxHand = p.cxCands || [];
     body = /*#__PURE__*/React.createElement("div", null,
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: 'var(--ink-dim)', marginBottom: 8 } }, '選一張手牌高潮卡棄掉（費用），然後選對手角色 +4 魂。'),
-      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 } },
-        _cxHand.map(cx => /*#__PURE__*/React.createElement("div", { key: cx.id, onClick: () => setSel(cx.id), style: { outline: sel === cx.id ? '3px solid var(--accent)' : 'none', borderRadius: 6, cursor: 'pointer', padding: 4, background: 'var(--panel)', borderRadius: 6 } },
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 12 } }, cx.name)))
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, maxHeight: '50vh', overflowY: 'auto' } },
+        _cxHand.map(cx => /*#__PURE__*/React.createElement("div", { key: cx.id, onClick: () => setSel(cx.id), style: { outline: sel === cx.id ? '3px solid var(--accent)' : 'none', borderRadius: 6, cursor: 'pointer' } },
+          /*#__PURE__*/React.createElement(CardFace, { card: { id: cx.id, key: cx.key, def: DEFS[cx.key], state: 'stand' }, hand: true })))
       ),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
         /*#__PURE__*/React.createElement("button", { onClick: () => { if (sel != null) { choose({ cxId: sel }); setSel(null); } }, disabled: sel == null, style: btnStyle(sel != null ? 'var(--green)' : 'var(--line)') }, '棄牌確認'),
@@ -10971,7 +11159,7 @@ function PendingModal({
         _oppCands.map(i => {
           const c2 = _oppP.stage[i];
           return /*#__PURE__*/React.createElement("div", { key: i, onClick: () => setSel(i), style: { outline: sel === i ? '3px solid var(--accent)' : 'none', borderRadius: 8, cursor: 'pointer' } },
-            /*#__PURE__*/React.createElement(CardFace, { card: c2, fill: true }));
+            /*#__PURE__*/React.createElement(CardFace, { card: c2, hand: true }));
         })
       ),
       /*#__PURE__*/React.createElement("button", { onClick: () => { if (sel != null) { choose({ slot: sel }); setSel(null); } }, disabled: sel == null, style: btnStyle(sel != null ? 'var(--green)' : 'var(--line)') }, '確認')

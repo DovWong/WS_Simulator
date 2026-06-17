@@ -19,7 +19,8 @@ const TRIG = {
   SOUL: 'soul',
   STANDBY: 'standby',
   // 紅門
-  GATE: 'gate' // 藍閘
+  GATE: 'gate', // 藍閘
+  CHOICE: 'choice' // 選擇（choice/チョイス）：觸發時從控室選1張符合條件的卡加入手牌
 };
 
 // ---- CX 名稱 ----
@@ -419,6 +420,173 @@ const DEFS = {
       trait: '幻想郷'
     },
     text: '【永】 若我方角色全員《幻想郷》，這張卡 +4000 力量。\n【自】 自身 Encore［棄1張《幻想郷》角色手牌］。'
+  },
+  // ===== L2 第一批 =====
+  thp_p02_mamizou: {
+    name: '人世を忍ぶ仮の化け姿 マミゾウ',
+    type: 'CHAR',
+    rarity: 'PR',
+    作品: '東方Project',
+    color: 'red',
+    level: 0,
+    cost: 0,
+    power: 2000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '人間の里'],
+    fx: 'ATK_BUFF_ANY_1000',
+    text: '【自】 這張卡攻擊時，選擇 1 隻我方角色，當回合 +1000 力量。'
+  },
+  thp_p07_remilia: {
+    name: '一家健康の吸血鬼 レミリア',
+    type: 'CHAR',
+    rarity: 'PR',
+    作品: '東方Project',
+    color: 'blue',
+    level: 0,
+    cost: 0,
+    power: 1000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '紅魔館'],
+    fx: 'SUPPORT_FRONT_FLAT_500',
+    text: '【永】 応援對前方角色全部 +500 力量。'
+  },
+  thp_p10_youmu: {
+    name: '披露会の来賓 妖夢',
+    type: 'CHAR',
+    rarity: 'PR',
+    作品: '東方Project',
+    color: 'blue',
+    level: 1,
+    cost: 0,
+    power: 4000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '白玉楼'],
+    fx: 'CIP_BUFF_ANY_1500',
+    text: '【自】 這張卡從手牌放上舞台時，選擇 1 隻我方角色，當回合 +1500 力量。'
+  },
+  thp_t15_sakuya: {
+    name: '十六夜咲夜',
+    type: 'CHAR',
+    rarity: 'TD',
+    作品: '東方Project',
+    color: 'red',
+    level: 0,
+    cost: 0,
+    power: 2000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '紅魔館'],
+    fxList: ['CIP_BUFF_SELF_1500', 'LEAVE_LOOK3_GENSO_TAKE_DISCARD1'],
+    text: '【自】 這張卡從手牌放上舞台時，當回合 +1500 力量。\n【自】 這張卡從舞台放到控室時，翻開牌庫頂最多 3 張；若至少翻到 1 張，可選 1 張《幻想郷》角色加入手牌，其餘進控室；然後棄 1 張手牌。'
+  },
+  thp_t09_alice: {
+    name: 'アリス・マーガトロイド',
+    type: 'CHAR',
+    rarity: 'TD',
+    作品: '東方Project',
+    color: 'yellow',
+    level: 2,
+    cost: 1,
+    power: 4000,
+    soul: 1,
+    tsoul: 1,
+    trig: TRIG.SOUL,
+    traits: ['幻想郷', '魔法の森'],
+    fxList: ['SUPPORT_FRONT_LEVEL500', 'TRIGGER_GATE_BUFF_GENSO_2000'],
+    text: '【永】 応援對前方角色全部 +（該角色等級×500）力量。\n【自】 自方觸發為「choice」的卡觸發時，選擇 1 隻我方《幻想郷》角色，當回合 +2000 力量。'
+  },
+  thp_021_mystia: {
+    name: 'ミスティア・ローレライ＆幽谷響子',
+    type: 'CHAR',
+    rarity: 'C',
+    作品: '東方Project',
+    color: 'yellow',
+    level: 1,
+    cost: 0,
+    power: 4000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '音楽'],
+    fxList: ['NO_COLOR_RESTRICTION', 'CONT_SELF_GENSO2_P2000', 'ATK_COND_GENSO2_OPP_LV2_SELF6000'],
+    text: '【永】 這張卡可無視顏色條件從手牌出場。\n【永】 我方回合中，若其他我方《幻想郷》角色 ≥2，這張卡 +2000 力量，且獲得：【自】 這張卡攻擊時，若正面對手角色等級為 2，這張卡當回合再 +6000 力量。'
+  },
+  thp_036_sanae: {
+    name: '祀られる風の人間 早苗',
+    type: 'CHAR',
+    rarity: 'R',
+    作品: '東方Project',
+    color: 'green',
+    level: 2,
+    cost: 1,
+    power: 1000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '守矢神社'],
+    fxList: ['SUPPORT_FRONT_FLAT_1000', 'OPP_ATKPHASE_CX_COST_OPP_SOUL4'],
+    text: '【永】 応援對前方角色全部 +1000 力量。\n【自】 ［棄 1 張手牌中的高潮卡］ 對方攻擊階段開始時，可選擇支付：選 1 隻對手角色，當回合魂 +4。'
+  },
+  thp_044_momiji: {
+    name: '下っ端哨戒天狗 椛',
+    type: 'CHAR',
+    rarity: 'C',
+    作品: '東方Project',
+    color: 'green',
+    level: 0,
+    cost: 0,
+    power: 1500,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '妖怪の山'],
+    fxList: ['ATK_PEEK_BOTH_BOTTOM', 'ATK_SELF_PX_GENSO1000'],
+    text: '【自】 這張卡攻擊時，看自方牌庫底 1 張與對手牌庫底 1 張（看完放回原處）。\n【自】 這張卡攻擊時，當回合 +X 力量，X = 其他我方《幻想郷》角色數 × 1000。'
+  },
+  thp_065_septet: {
+    name: '亡き王女の為のセプテット レミリア',
+    type: 'CHAR',
+    rarity: 'R',
+    作品: '東方Project',
+    color: 'red',
+    level: 0,
+    cost: 0,
+    power: 2000,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '紅魔館'],
+    fxList: ['CIP_MILL2_SELF_GENSO_BUFF', 'ON_CX_PLACED_COST_CHAR_LOOK4_GENSO'],
+    text: '【自】 這張卡從手牌放上舞台時，翻牌庫頂 2 張放入控室，當回合 +X 力量，X = 那些牌中《幻想郷》角色數 × 1000。\n【自】 ［將舞台上另 1 隻角色放控室］ 我方高潮卡放到高潮置場時，可選擇支付：看牌庫頂最多 4 張，可選 1 張《幻想郷》角色展示後加入手牌，其餘進控室。'
+  },
+  thp_080_patchouli: {
+    name: '知識と日陰の少女 パチュリー',
+    type: 'CHAR',
+    rarity: 'C',
+    作品: '東方Project',
+    color: 'red',
+    level: 1,
+    cost: 0,
+    power: 4500,
+    soul: 1,
+    trig: TRIG.NONE,
+    traits: ['幻想郷', '紅魔館'],
+    fx: 'CIP_OPT_LOOK7_GENSO_SELF1500',
+    text: '【自】 ［(1) 棄 1 張手牌］ 這張卡從手牌放上舞台時，可選擇支付：看牌庫頂最多 7 張，可選 1 張《幻想郷》角色展示後加入手牌，其餘進控室；當回合 +1500 力量。'
+  },
+  // ===== 東方Project CX =====
+  thp_cx_standby_hakurei: {
+    name: '博麗の巫女',
+    type: 'CX',
+    rarity: 'CR',
+    作品: '東方Project',
+    color: 'red',
+    level: 0,
+    cost: 0,
+    power: 0,
+    soul: 1,
+    trig: TRIG.STANDBY,
+    cont: 'ALL_P1000_S1',
+    text: '【永】全體角色 +1000 力量、+1 魂。（門觸發：可從控室選 1 張角色加入手牌）'
   }
 };
 
@@ -616,7 +784,24 @@ function makeSandboxState(names, work) {
   return s;
 }
 // 沙盒「對手 default 場面」：用指定作品的卡擺一套標準對手場
-//  等級1、錢1、傷害3隨機、場上5隻隨機L1角色、控室10(2CX+8角色)
+//  等級1、錢10、傷害3隨機、場上5隻隨機L1角色、控室10(2CX+8角色)
+function _pick4ColorCards(chars) {
+  // 從 chars 各色取1張，再隨機補2張，共6張打亂 → 前3給等級區，後3給傷害區
+  const colors = ['yellow', 'red', 'blue', 'green'];
+  const pick = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+  const byColor = c => colors.map(col => pick(chars.filter(k => DEFS[k].color === col))).filter(Boolean);
+  const base = byColor(chars); // 最多4張（各色1）
+  // 不足4色時補隨機
+  while (base.length < 4) base.push(pick(chars));
+  // 補2張隨機
+  base.push(pick(chars), pick(chars));
+  // Fisher-Yates shuffle
+  for (let i = base.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [base[i], base[j]] = [base[j], base[i]];
+  }
+  return base.filter(Boolean).slice(0, 6);
+}
 function sandboxDefaultOpponent(s, work) {
   work = work || s.sandboxWork || '初始';
   const P = s.players[1];
@@ -635,16 +820,13 @@ function sandboxDefaultOpponent(s, work) {
   P.wr = [];
   P.cx = [];
   P.resolution = [];
-  // 等級區1張、錢1張（隨機角色）
-  let c;
-  c = mk(pick(chars));
-  if (c) P.level.push(c);
-  c = mk(pick(chars));
-  if (c) P.stock.push(c);
-  // 傷害區3張隨機
-  for (let i = 0; i < 3; i++) {
-    c = mk(pick(chars));
-    if (c) P.clock.push(c);
+  // 等級區3張、傷害區3張（共6張，集齊4色）、錢10張
+  const sixKeys = _pick4ColorCards(chars);
+  sixKeys.slice(0, 3).forEach(k => P.level.push(mk(k)));
+  sixKeys.slice(3, 6).forEach(k => P.clock.push(mk(k)));
+  for (let i = 0; i < 10; i++) {
+    const c = mk(pick(chars));
+    if (c) P.stock.push(c);
   }
   // 場上5隻隨機 L1 角色（沒有 L1 就用任意角色）
   for (let i = 0; i < 5; i++) {
@@ -659,6 +841,26 @@ function sandboxDefaultOpponent(s, work) {
   for (let i = 0; i < 8; i++) {
     c = mk(pick(chars));
     if (c) P.wr.push(c);
+  }
+  return s;
+}
+// 沙盒「我方 default」：只設等級區3張、錢10張、時計3張（共6張集齊4色），其餘不動
+function sandboxDefaultMe(s, work) {
+  work = work || s.sandboxWork || '初始';
+  const P = s.players[0];
+  const pool = Object.keys(DEFS).filter(k => (DEFS[k]['作品'] || '初始') === work);
+  const chars = pool.filter(k => DEFS[k].type === 'CHAR');
+  const pick = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+  const mk = k => k ? mkCard(k, 'stand') : null;
+  P.level = [];
+  P.stock = [];
+  P.clock = [];
+  const sixKeys = _pick4ColorCards(chars);
+  sixKeys.slice(0, 3).forEach(k => P.level.push(mk(k)));
+  sixKeys.slice(3, 6).forEach(k => P.clock.push(mk(k)));
+  for (let i = 0; i < 10; i++) {
+    const c = mk(pick(chars));
+    if (c) P.stock.push(c);
   }
   return s;
 }
@@ -784,30 +986,35 @@ function continuousFromStage(P, card, slot, state, pIdx) {
     if (c && c.def.fx === 'CONT_OTHER_ALL_P1000' && i !== slot) power += 1000;
   });
   // 軍師·玲（後列）：前方初始 +Lv*500
+  // 応援（後列）：SUPPORT_FRONT_FLAT_500/1000 和 SUPPORT_FRONT_LEVEL500
   BACK.forEach(bslot => {
     const sup = P.stage[bslot];
-    if (sup && sup.def.fx === 'CONT_FRONT_INITIAL_PLVL500') {
-      if (frontOf(bslot).includes(slot) && hasTrait(card, '初始')) power += card.def.level * 500;
-    }
+    if (!sup) return;
+    const supFxs = sup.def.fxList || (sup.def.fx ? [sup.def.fx] : []);
+    const inFront = frontOf(bslot).includes(slot);
+    if (!inFront) return;
+    if (supFxs.includes('CONT_FRONT_INITIAL_PLVL500') && hasTrait(card, '初始')) power += card.def.level * 500;
+    if (supFxs.includes('SUPPORT_FRONT_FLAT_500')) power += 500;
+    if (supFxs.includes('SUPPORT_FRONT_FLAT_1000')) power += 1000;
+    if (supFxs.includes('SUPPORT_FRONT_LEVEL500')) power += card.def.level * 500;
   });
   // 覇者·烈：場上另有3隻初始 +1500
   if (card.def.fx === 'RED3_PACKAGE') {
     const others = P.stage.filter((c, i) => c && i !== slot && hasTrait(c, '初始')).length;
     if (others >= 3) power += 1500;
   }
-  // ===== 東方：條件式自我加成 =====
+  // ===== 東方：條件式自我加成（支援 fxList）=====
   const isMyTurn = state && pIdx != null && state.turnPlayer === pIdx;
-  // 場上我方角色數、幻想郷角色數
   const stageChars = P.stage.filter(c => c);
-  const gensoCount = stageChars.filter(c => hasTrait(c, '幻想郷')).length;
   const otherGenso = P.stage.filter((c, i) => c && i !== slot && hasTrait(c, '幻想郷')).length;
   const allGenso = stageChars.length > 0 && stageChars.every(c => hasTrait(c, '幻想郷'));
-  const fx = card.def.fx;
-  if (fx === 'CONT_SELF_MYTURN_P1000' && isMyTurn) power += 1000;
-  if (fx === 'CONT_SELF_GENSO2_P2000' && isMyTurn && otherGenso >= 2) power += 2000;
-  if (fx === 'CONT_SELF_GENSO2_P6000' && isMyTurn && otherGenso >= 2) power += 6000;
-  if (fx === 'CONT_SELF_ALLGENSO_P5000' && isMyTurn && allGenso) power += 5000;
-  if (fx === 'CONT_SELF_ALLGENSO_P4000' && allGenso) power += 4000; // 妹紅無「我方回合」限制
+  const selfFxs = card.def.fxList || (card.def.fx ? [card.def.fx] : []);
+  const hasSelf = x => selfFxs.includes(x);
+  if (hasSelf('CONT_SELF_MYTURN_P1000') && isMyTurn) power += 1000;
+  if (hasSelf('CONT_SELF_GENSO2_P2000') && isMyTurn && otherGenso >= 2) power += 2000;
+  if (hasSelf('CONT_SELF_GENSO2_P6000') && isMyTurn && otherGenso >= 2) power += 6000;
+  if (hasSelf('CONT_SELF_ALLGENSO_P5000') && isMyTurn && allGenso) power += 5000;
+  if (hasSelf('CONT_SELF_ALLGENSO_P4000') && allGenso) power += 4000;
   return power;
 }
 function calcPower(state, pIdx, slot) {
@@ -842,7 +1049,14 @@ function calcSoul(state, pIdx, slot) {
    Reducer：所有遊戲動作集中在這
    ============================================================ */
 function gameReducer(state, action) {
-  return gameReducerInner(state, action);
+  let s = gameReducerInner(state, action);
+  // 統一收口：任何動作後若有角色力量降至 0 以下，立即破壞（規則處理）。
+  // 僅在沒有 pending（不打斷互動流程）且處於對戰階段時檢查。
+  const battlePhase = s && (s.phase === 'main' || s.phase === 'climax' || s.phase === 'attack' || s.phase === 'encore');
+  if (s && !s.pending && battlePhase && s.players) {
+    s = checkZeroPowerDestroy(s);
+  }
+  return s;
 }
 function gameReducerInner(state, action) {
   const s = structuredCloneState(state);
@@ -905,6 +1119,8 @@ function gameReducerInner(state, action) {
           P.deck = shuffle(buildDeck(dl.length ? dl : null));
         } else if (op === 'defaultOpponent') {
           sandboxDefaultOpponent(s, s.sandboxWork);
+        } else if (op === 'defaultMe') {
+          sandboxDefaultMe(s, s.sandboxWork);
         } else if (op === 'addMany') {
           // 一次加入多張卡到某 zone（多選確定）。action.keys = [key,...]
           (action.keys || []).forEach(k => {
@@ -1116,10 +1332,28 @@ function gameReducerInner(state, action) {
           confirmBy: 'opp',
           byPIdx: s.turnPlayer
         });
+        // セプテット②：場上有 ON_CX_PLACED_COST_CHAR_LOOK4_GENSO 時觸發
+        {
+          const tp = s.turnPlayer;
+          const septetSlots = [0,1,2,3,4].filter(i => {
+            const c = P.stage[i];
+            return c && (c.def.fxList || (c.def.fx ? [c.def.fx] : [])).includes('ON_CX_PLACED_COST_CHAR_LOOK4_GENSO');
+          });
+          const otherChars = [0,1,2,3,4].filter(i => {
+            const c = P.stage[i];
+            return c && !septetSlots.includes(i);
+          });
+          if (septetSlots.length > 0 && otherChars.length > 0) {
+            if (isHuman(s, tp)) {
+              s.pending = { type: 'SEPTET_CX_COST', pIdx: tp, septetSlots, otherChars };
+            }
+            // NPC：不發動（需消耗其他角色，太複雜）
+          }
+        }
         // 打完自動進 attack
         s.phase = 'attack';
         s.log.push('【Attack】可宣告攻擊。');
-        triggerOppAtkPhase(s);
+        if (!s.pending) triggerOppAtkPhase(s);
         return s;
       }
     case 'PLAY_CHAR':
@@ -1604,7 +1838,8 @@ function playChar(s, handId, slot) {
     s.log.push(`錢不足，無法出 ${card.def.name}（需${card.def.cost}費）。`);
     return s;
   }
-  if (!meetsColorRequirement(P, card)) {
+  const _cipFxs = card.def.fxList || (card.def.fx ? [card.def.fx] : []);
+  if (!_cipFxs.includes('NO_COLOR_RESTRICTION') && !meetsColorRequirement(P, card)) {
     s.log.push(`顏色條件不足：出 ${card.def.name}（${card.def.cost}費）需等級區或傷害區有同色卡。`);
     return s;
   }
@@ -1630,7 +1865,8 @@ function playChar(s, handId, slot) {
   if (old) {
     P.wr.push(old);
     s.log.push(`${old.def.name} 被踩死，落控室。`);
-    // 若沒有 CIP pending 卡住，立即處理踩死 encore
+    s = applyLeaveStage(s, s.turnPlayer, old);
+    // 若沒有 CIP/leave pending 卡住，立即處理踩死 encore
     if (!s.pending) {
       s = askCrushEncore(s, s.turnPlayer, old, slot);
     } else {
@@ -1700,105 +1936,209 @@ function doCrushEncore(s, pIdx, cardId, slot) {
 /* ---------- CIP（出場時）效果 ---------- */
 function applyCIP(s, pIdx, slot, card) {
   const P = s.players[pIdx];
-  switch (card.def.fx) {
-    case 'CIP_TOPDECK_DROP_RESTSELF':
-      {
-        // 偵察兵·燕：碌2，一律落控室；2張中任一張是CX則此卡橫置
-        let anyCX = false;
-        const sflip = [];
-        for (let k = 0; k < 2; k++) {
-          const top = pull(s, pIdx);
-          if (!top) break;
-          sflip.push(top);
-          P.wr.push(top);
-          s.log.push(`${card.def.name}：碌出 ${top.def.name} 落控室。`);
-          if (top.def.type === 'CX') anyCX = true;
-        }
-        if (anyCX) {
-          card.state = 'rest';
-          s.log.push(`碌中CX，${card.def.name} 橫置。`);
-        }
-        if (sflip.length > 0) {
-          if (!s.banners) s.banners = [];
-          s.banners.push({
-            kind: 'flip',
-            stagingTitle: '偵察兵·碌2',
-            title: anyCX ? '碌中CX，橫置' : '碌2完成',
-            cardKeys: sflip.map(c => c.key),
-            stagger: true,
-            confirmBy: 'opp',
-            byPIdx: pIdx,
-            big: true
-          });
-        }
-        break;
+  const fxs = card.def.fxList || (card.def.fx ? [card.def.fx] : []);
+  const cipHas = x => fxs.includes(x);
+
+  if (cipHas('CIP_TOPDECK_DROP_RESTSELF')) {
+    // 偵察兵·燕：碌2，一律落控室；2張中任一張是CX則此卡橫置
+    let anyCX = false;
+    const sflip = [];
+    for (let k = 0; k < 2; k++) {
+      const top = pull(s, pIdx);
+      if (!top) break;
+      sflip.push(top);
+      P.wr.push(top);
+      s.log.push(`${card.def.name}：碌出 ${top.def.name} 落控室。`);
+      if (top.def.type === 'CX') anyCX = true;
+    }
+    if (anyCX) {
+      card.state = 'rest';
+      s.log.push(`碌中CX，${card.def.name} 橫置。`);
+    }
+    if (sflip.length > 0) {
+      if (!s.banners) s.banners = [];
+      s.banners.push({
+        kind: 'reveal',
+        title: `${card.def.name} 出場`,
+        cardKeys: [card.key],
+        dur: 1000,
+        byPIdx: pIdx
+      });
+      s.banners.push({
+        kind: 'flip',
+        stagingTitle: '偵察兵·碌2',
+        title: anyCX ? '碌中CX，橫置' : '碌2完成',
+        cardKeys: sflip.map(c => c.key),
+        stagger: true,
+        confirmBy: 'opp',
+        byPIdx: pIdx,
+        big: true
+      });
+    }
+  }
+
+  if (cipHas('RED3_PACKAGE')) {
+    if (P.clock.length > 0) {
+      if (isHuman(s, pIdx)) {
+        s.pending = { type: 'RED3_CLOCKDROP', pIdx, slot };
+      } else {
+        const c = P.clock.pop();
+        P.wr.push(c);
+        s.log.push(`${P.name} 將傷害區頂落控室。`);
       }
-    case 'RED3_PACKAGE':
-      {
-        if (P.clock.length > 0) {
-          if (isHuman(s, pIdx)) {
-            s.pending = {
-              type: 'RED3_CLOCKDROP',
-              pIdx,
-              slot
-            };
-          } else {
-            const c = P.clock.pop();
-            P.wr.push(c);
-            s.log.push(`${P.name} 將傷害區頂落控室。`);
-          }
-        }
-        break;
+    }
+  }
+
+  if (cipHas('BLUE3_PACKAGE')) {
+    // 逐步抽：最多2張，抽≥1後丟1
+    if (isHuman(s, pIdx)) {
+      s.pending = { type: 'STEP_DRAW', pIdx, drawn: 0, max: 2 };
+    } else {
+      drawCards(s, pIdx, 2);
+      if (P.hand.length > 0) {
+        const d = P.hand.shift();
+        P.wr.push(d);
+        s.log.push(`${P.name} draw2丟1。`);
       }
-    case 'BLUE3_PACKAGE':
-      {
-        // 逐步抽：最多2張，抽≥1後丟1
-        if (isHuman(s, pIdx)) {
-          s.pending = {
-            type: 'STEP_DRAW',
-            pIdx,
-            drawn: 0,
-            max: 2
-          };
-        } else {
-          drawCards(s, pIdx, 2);
-          if (P.hand.length > 0) {
-            const d = P.hand.shift();
-            P.wr.push(d);
-            s.log.push(`${P.name} draw2丟1。`);
-          }
-        }
-        break;
+    }
+  }
+
+  if (cipHas('BLUE3_LOOK3_BURN')) {
+    // 逐步看：最多3張，最後選1上手其餘落控室
+    if (isHuman(s, pIdx)) {
+      s.pending = { type: 'STEP_LOOK', pIdx, looked: [], max: 3 };
+    } else {
+      const lookN = Math.min(3, P.deck.length);
+      const top = takeTop(s, pIdx, lookN, true);
+      let kept = false;
+      top.forEach(c => {
+        if (!kept && c.def.type === 'CHAR') { P.hand.push(c); kept = true; }
+        else P.wr.push(c);
+      });
+      s.log.push(`${P.name} 看牌庫頂3張取1。`);
+      maybeRefresh(s, pIdx);
+    }
+  }
+
+  // 咲夜①：登場當回合自身 +1500
+  if (cipHas('CIP_BUFF_SELF_1500')) {
+    card.autoBuff = card.autoBuff || { power: 0, soul: 0 };
+    card.autoBuff.power += 1500;
+    s.log.push(`✨ ${card.def.name}：登場當回合 +1500。`);
+  }
+
+  // 妖夢：登場選任意1隻我方角色當回合 +1500
+  if (cipHas('CIP_BUFF_ANY_1500') && !s.pending) {
+    const cands = [0,1,2,3,4].filter(i => s.players[pIdx].stage[i]);
+    if (cands.length > 0) {
+      if (isHuman(s, pIdx)) {
+        s.pending = { type: 'CHARSEL_BUFF', pIdx, amount: 1500, cand: cands, source: card.def.name };
+      } else {
+        // NPC：優先選力量最高的（含自身）
+        const best = cands.reduce((a, b) =>
+          calcPower(s, pIdx, a) >= calcPower(s, pIdx, b) ? a : b);
+        const bc = s.players[pIdx].stage[best];
+        bc.autoBuff = bc.autoBuff || { power: 0, soul: 0 };
+        bc.autoBuff.power += 1500;
+        s.log.push(`✨ ${card.def.name}：${bc.def.name} 當回合 +1500。`);
       }
-    case 'BLUE3_LOOK3_BURN':
-      {
-        // 逐步看：最多3張，最後選1上手其餘落控室
-        if (isHuman(s, pIdx)) {
-          s.pending = {
-            type: 'STEP_LOOK',
-            pIdx,
-            looked: [],
-            max: 3
-          };
-        } else {
-          // 看的牌「還在牌組」，直到選的卡上手才爆deck → 用 deferRefresh，
-          // 並把張數上限壓到目前 deck 張數（看不到不存在的牌、不會中途 refresh）。
-          const lookN = Math.min(3, P.deck.length);
-          const top = takeTop(s, pIdx, lookN, true);
-          let kept = false;
-          top.forEach(c => {
-            if (!kept && c.def.type === 'CHAR') {
-              P.hand.push(c);
-              kept = true;
-            } else P.wr.push(c);
-          });
-          s.log.push(`${P.name} 看牌庫頂3張取1。`);
-          maybeRefresh(s, pIdx); // 牌去向已定 → 補做 deck 歸零檢查
-        }
-        break;
+    }
+  }
+
+  // セプテット①：登場碌頂2張落控室，自身當回合 +（幻想郷角色數×1000）
+  if (cipHas('CIP_MILL2_SELF_GENSO_BUFF') && !s.pending) {
+    const milled = [];
+    for (let k = 0; k < 2; k++) {
+      const top = pull(s, pIdx, true); // deferRefresh
+      if (!top) break;
+      milled.push(top);
+      P.wr.push(top);
+    }
+    maybeRefresh(s, pIdx);
+    const gensoN = milled.filter(c => c.def.type === 'CHAR' && hasTrait(c, '幻想郷')).length;
+    if (gensoN > 0) {
+      card.autoBuff = card.autoBuff || { power: 0, soul: 0 };
+      card.autoBuff.power += gensoN * 1000;
+    }
+    s.log.push(`🔴 ${card.def.name}：碌${milled.length}張，其中${gensoN}隻幻想郷，當回合 +${gensoN*1000}。`);
+    if (milled.length > 0) {
+      if (!s.banners) s.banners = [];
+      s.banners.push({
+        kind: 'reveal',
+        title: `${card.def.name} 出場`,
+        cardKeys: [card.key],
+        dur: 1000,
+        byPIdx: pIdx
+      });
+      s.banners.push({
+        kind: 'flip',
+        stagingTitle: `${card.def.name}·碌2`,
+        title: `幻想郷×${gensoN}，+${gensoN*1000}`,
+        cardKeys: milled.map(c => c.key),
+        stagger: true,
+        confirmBy: 'opp',
+        byPIdx: pIdx,
+        big: true
+      });
+    }
+  }
+
+  // パチュリー：登場時可選擇支付[(1)棄1張手牌]，看牌庫頂最多7張取1幻想郷，自身 +1500
+  if (cipHas('CIP_OPT_LOOK7_GENSO_SELF1500') && !s.pending) {
+    const canPay = P.stock.length >= 1 && P.hand.length > 0;
+    if (canPay) {
+      if (isHuman(s, pIdx)) {
+        s.pending = {
+          type: 'OPT_COST_ASK',
+          pIdx,
+          slot,
+          costDesc: '(1) 棄 1 張手牌',
+          onPayFx: 'LOOK7_GENSO_SELF1500',
+          cardName: card.def.name
+        };
+      } else {
+        // NPC：不發動（效果搜索對NPC幫助有限，且需要消耗）
+        s.log.push(`${card.def.name}：NPC 略過看牌效果。`);
       }
-    default:
-      break;
+    }
+  }
+
+  return s;
+}
+
+/* ---------- 角色離場效果 ---------- */
+// 當有離場效果的角色從舞台放到控室時呼叫（crush/encore/zero destroy 均需呼叫）
+function applyLeaveStage(s, pIdx, card) {
+  const fxs = card.def.fxList || (card.def.fx ? [card.def.fx] : []);
+  if (!fxs.includes('LEAVE_LOOK3_GENSO_TAKE_DISCARD1')) return s;
+  const P = s.players[pIdx];
+  s.log.push(`✨ ${card.def.name}：從舞台離場，觸發看牌效果。`);
+  if (isHuman(s, pIdx)) {
+    s.pending = {
+      type: 'STEP_LOOK',
+      pIdx,
+      looked: [],
+      max: 3,
+      filterGensokyo: true,
+      afterDiscard1: true
+    };
+  } else {
+    const lookN = Math.min(3, P.deck.length);
+    const top = takeTop(s, pIdx, lookN, true);
+    if (top.length > 0) {
+      let kept = false;
+      top.forEach(c => {
+        if (!kept && c.def.type === 'CHAR' && hasTrait(c, '幻想郷')) { P.hand.push(c); kept = true; }
+        else P.wr.push(c);
+      });
+      maybeRefresh(s, pIdx);
+      // NPC 丟最左一張手牌
+      if (P.hand.length > 0) {
+        const d = P.hand.shift();
+        P.wr.push(d);
+        s.log.push(`${P.name} 咲夜效果：棄 ${d.def.name}。`);
+      }
+    }
   }
   return s;
 }
@@ -1878,7 +2218,6 @@ function runAttackFx(s, ctx) {
         s.log.push(`🟣 ${attacker.def.name}：對手前列全部當回合 -2500。`);
       }
       pushReveal(top, success, '對手前列全部 −2500');
-      if (success) s = checkZeroPowerDestroy(s);
     }
   }
   // 椛：攻擊時自己 +（其他我方幻想郷角色數 × 1000）
@@ -1887,6 +2226,47 @@ function runAttackFx(s, ctx) {
     if (otherGenso > 0) {
       buffSelf(otherGenso * 1000);
       s.log.push(`🟢 ${attacker.def.name}：當回合 +${otherGenso * 1000}（其他幻想郷×1000）。`);
+    }
+  }
+  // マミゾウ：攻擊時，選 1 隻我方角色當回合 +1000
+  if (has('ATK_BUFF_ANY_1000')) {
+    const cands = [0,1,2,3,4].filter(i => aP.stage[i]);
+    if (cands.length > 0) {
+      if (isHuman(s, ctx.aPIdx)) {
+        s.pending = { type: 'CHARSEL_BUFF', pIdx: ctx.aPIdx, amount: 1000, cand: cands, source: attacker.def.name };
+        ctx.resumeAfterPending = 'counter';
+      } else {
+        const best = cands.reduce((a, b) => calcPower(s, ctx.aPIdx, a) >= calcPower(s, ctx.aPIdx, b) ? a : b);
+        const bc = aP.stage[best];
+        bc.autoBuff = bc.autoBuff || { power: 0, soul: 0 };
+        bc.autoBuff.power += 1000;
+        s.log.push(`✨ ${attacker.def.name}：${bc.def.name} 當回合 +1000。`);
+      }
+    }
+  }
+  // 椛①：攻擊時看自方牌庫底1張與對手牌庫底1張（只顯示，放回）
+  if (has('ATK_PEEK_BOTH_BOTTOM')) {
+    const myBot = aP.deck.length > 0 ? aP.deck[0] : null;
+    const oppBot = dP.deck.length > 0 ? dP.deck[0] : null;
+    s.log.push(`🔭 ${attacker.def.name}：自方牌庫底＝${myBot ? myBot.def.name : '無'}；對方牌庫底＝${oppBot ? oppBot.def.name : '無'}。`);
+    if (!s.banners) s.banners = [];
+    s.banners.push({
+      kind: 'reveal',
+      title: `椛·看雙方牌庫底`,
+      subtitle: `自方：${myBot ? myBot.def.name : '無'} ／ 對方：${oppBot ? oppBot.def.name : '無'}`,
+      cardKeys: [myBot, oppBot].filter(Boolean).map(c => c.key),
+      dur: 5000,
+      confirmBy: 'attacker',
+      byPIdx: ctx.aPIdx
+    });
+  }
+  // ミスティア：攻擊時，若其他幻想郷≥2 且正面對手角色等級=2，自身再 +6000
+  if (has('ATK_COND_GENSO2_OPP_LV2_SELF6000')) {
+    const otherGenso = aP.stage.filter((c, i) => c && i !== ctx.slot && hasTrait(c, '幻想郷')).length;
+    const oppFront = dP.stage[ctx.slot]; // 正面角色同 slot
+    if (otherGenso >= 2 && oppFront && oppFront.def.level === 2) {
+      buffSelf(6000);
+      s.log.push(`🟡 ${attacker.def.name}：正面lv2且幻想郷≥2，當回合 +6000。`);
     }
   }
   // にとり：攻擊時，CX區有「choice圖示CX」且有其他幻想郷 → 公開頂1張，幻想郷角色進手
@@ -1930,13 +2310,6 @@ function checkZeroPowerDestroy(s) {
       s.players[pIdx].stage[i].state = 'reverse';
       s.players[pIdx].stage[i].zeroDestroying = true;
       s.log.push(`💥 ${P.stage[i].def.name} 力量降至 0 以下，被破壞。`);
-      // 若攻擊或防守角色被破壞，依規則 7.6.1.3 戰鬥不發生
-      if (s.attackCtx) {
-        const _ctx = s.attackCtx;
-        if ((pIdx === _ctx.aPIdx && i === _ctx.slot) || (pIdx === _ctx.dPIdx && i === _ctx.dslot)) {
-          _ctx.battleVoided = true;
-        }
-      }
     });
     if (isHuman(s, pIdx)) {
       const cost = encoreCost(s, pIdx);
@@ -1985,18 +2358,6 @@ function checkZeroPowerDestroy(s) {
       });
     }
   }
-  // 攻擊效果（メディスン等）的零破壞 encore 結算完後，從這裡恢復攻擊流程
-  // （ZERO_ENCORE_SELECT/SELF_ENCORE_ASK handler 用 return checkZeroPowerDestroy(s) 收尾，
-  //   無法落到 resolvePending 的 resume 區，所以在這裡統一處理）
-  if (!s.pending && s.attackCtx) {
-    const _r = s.attackCtx.resumeAfterPending;
-    if (_r) {
-      s.attackCtx.resumeAfterPending = null;
-      if (_r === 'burn') return attackBurnStep(s);
-      if (_r === 'counter') return attackCounterStep(s);
-      if (_r === 'battle') return attackBattleStep(s);
-    }
-  }
   return s;
 }
 function declareAttack(s, slot, kind) {
@@ -2043,7 +2404,6 @@ function attackAfterConfirm(s) {
     ctx.mode = 'direct';
     s.log.push(`⚔️ ${aP.name} 用 ${attacker.def.name} 直接攻擊。`);
     s = runAttackFx(s, ctx);
-    if (s.pending) { ctx.resumeAfterPending = 'burn'; return s; }
     return attackBurnStep(s);
   }
   // 有防守者：真人選正/側打；NPC 智能選
@@ -2071,7 +2431,6 @@ function attackAfterConfirm(s) {
   } // 都不理想，預設正打
   s.log.push(`⚔️ ${aP.name} 用 ${attacker.def.name} ${ctx.mode === 'side' ? '側面攻擊' : '正面攻擊'}。`);
   s = runAttackFx(s, ctx);
-  if (s.pending) { ctx.resumeAfterPending = 'burn'; return s; }
   return attackBurnStep(s);
 }
 
@@ -2208,6 +2567,7 @@ function attackTriggerStep(s) {
     s.log.push(trigMsg);
     if (trigCard.def.trig === TRIG.STANDBY) s = doStandby(s, ctx.aPIdx, trigCard);
     if (trigCard.def.trig === TRIG.GATE) s = doGate(s, ctx.aPIdx, trigCard);
+    if (trigCard.def.trig === TRIG.CHOICE) s = doChoice(s, ctx.aPIdx, trigCard);
   }
   ctx.bonusSoul = bonusSoul;
   // 有 pending(門/閘需玩家選)就等，否則進 counter
@@ -2279,16 +2639,12 @@ function attackBattleStep(s) {
   const attacker = aP.stage[ctx.slot];
   // 側面/直接不戰鬥
   if (ctx.mode === 'front') {
-    // 攻擊或防守角色已被破壞（規則 7.6.1.3）→ 戰鬥不發生
-    if (ctx.battleVoided) {
-      s.log.push('攻擊或防守角色已被破壞，戰鬥不發生（規則 7.6.1.3）。');
-      if (!s.pending) s.attackCtx = null;
-      return s;
-    }
     const defender = dP.stage[ctx.dslot];
-    // 安全網：力量仍≤0（非 battleVoided 路徑）→ 同樣跳過
+    // 戰鬥前：攻擊對象因力量≤0已被規則破壞 → 不發生戰鬥（counter step 已在前面跑過）。
+    // 由 checkZeroPowerDestroy（reducer 收口）負責落控室/encore；這裡只記錄並跳過戰鬥。
     if (attacker && defender && calcPower(s, ctx.dPIdx, ctx.dslot) <= 0) {
-      s.log.push(`${defender.def.name} 戰鬥前力量已降至 0 以下，戰鬥不發生。`);
+      s.log.push(`${defender.def.name} 戰鬥前力量已降至 0 以下，直接被破壞，戰鬥不發生。`);
+      // 不進行 aPow vs dPow，攻擊者不倒置對象、也不被反殺
       if (!s.pending) s.attackCtx = null;
       return s;
     }
@@ -2539,13 +2895,59 @@ function doStandby(s, pIdx, cxCard) {
   }
   return s;
 }
+// アリス choice觸發加成：觸發方場上有 TRIGGER_GATE_BUFF_GENSO_2000 時，選1隻幻想郷角色 +2000
+function applyAliceChoiceBuff(s, pIdx) {
+  const P = s.players[pIdx];
+  const aliceOnStage = P.stage.some(c => c && (c.def.fxList || (c.def.fx ? [c.def.fx] : [])).includes('TRIGGER_GATE_BUFF_GENSO_2000'));
+  if (!aliceOnStage) return s;
+  const cands = [0,1,2,3,4].filter(i => P.stage[i] && hasTrait(P.stage[i], '幻想郷'));
+  if (cands.length === 0) return s;
+  if (isHuman(s, pIdx)) {
+    s.pending = { type: 'CHARSEL_BUFF', pIdx, amount: 2000, cand: cands, source: 'アリス·choice觸發', filterGensokyo: true };
+  } else {
+    const best = cands.reduce((a, b) => calcPower(s, pIdx, a) >= calcPower(s, pIdx, b) ? a : b);
+    const bc = P.stage[best];
+    bc.autoBuff = bc.autoBuff || { power: 0, soul: 0 };
+    bc.autoBuff.power += 2000;
+    s.log.push(`🟡 アリス choice觸發：${bc.def.name} 當回合 +2000。`);
+  }
+  return s;
+}
+// choice CX 觸發：從控室選1張符合條件的角色加入手牌（類似門，但可由CX條件自訂）
+function doChoice(s, pIdx, cxCard) {
+  const P = s.players[pIdx];
+  const cands = P.wr.filter(c => c.def.type === 'CHAR');
+  if (cands.length === 0) {
+    s.log.push(`${P.name} choice：控室無角色可回收。`);
+    s = applyAliceChoiceBuff(s, pIdx);
+    return s;
+  }
+  if (isHuman(s, pIdx)) {
+    s.pending = { type: 'CHOICE_RECOVER', pIdx };
+    return s;
+  }
+  // NPC：優先出得起的角色，否則最高power
+  cands.sort((a, b) => {
+    const ap = a.def.level <= P.level.length && P.stock.length >= a.def.cost ? 1 : 0;
+    const bp = b.def.level <= P.level.length && P.stock.length >= b.def.cost ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return b.def.power - a.def.power;
+  });
+  const cand = cands[0];
+  if (cand) {
+    P.wr = P.wr.filter(c => c.id !== cand.id);
+    P.hand.push(cand);
+    s.log.push(`${P.name} choice：${cand.def.name} 回到手牌。`);
+    if (!s.banners) s.banners = [];
+    s.banners.push({ kind: 'recover', title: 'Choice·回收角色', cardKeys: [cand.key], confirmBy: 'opp', byPIdx: pIdx, big: true });
+  }
+  s = applyAliceChoiceBuff(s, pIdx);
+  return s;
+}
 function doGate(s, pIdx, cxCard) {
   const P = s.players[pIdx];
   if (isHuman(s, pIdx)) {
-    s.pending = {
-      type: "GATE",
-      pIdx
-    };
+    s.pending = { type: "GATE", pIdx };
     return s;
   }
   const cx = P.wr.find(c => c.def.type === 'CX');
@@ -2738,19 +3140,45 @@ function activateConcentrate(s, slot) {
 /* ---------- 對手攻擊階段：伏兵·霞 ----------
    碌牌庫頂1張，一律落控室。若碌中角色牌，可移動「伏兵·霞自己」到場上空位。
 */
+function triggerAmbushAfterSanae(s, dPIdx) {
+  const D = s.players[dPIdx];
+  const ambushSlots = [];
+  D.stage.forEach((c, i) => {
+    if (c && c.def.fx === 'AUTO_OPP_ATKPHASE_TOPCHAR') ambushSlots.push(i);
+  });
+  if (ambushSlots.length === 0) return s;
+  s.ambushQueue = { pIdx: dPIdx, slots: ambushSlots };
+  return processAmbush(s);
+}
 function triggerOppAtkPhase(s) {
   const dPIdx = s.turnPlayer === 0 ? 1 : 0;
   const D = s.players[dPIdx];
+  // 早苗②：棄CX，選對手1隻角色當回合 +4 soul
+  const sanaeFxSlots = [0,1,2,3,4].filter(i => {
+    const c = D.stage[i];
+    return c && (c.def.fxList || (c.def.fx ? [c.def.fx] : [])).includes('OPP_ATKPHASE_CX_COST_OPP_SOUL4');
+  });
+  if (sanaeFxSlots.length > 0) {
+    const cxInHand = D.hand.filter(c => c.def.type === 'CX');
+    if (cxInHand.length > 0) {
+      if (isHuman(s, dPIdx)) {
+        s.pending = {
+          type: 'SANAE_SOUL4_ASK',
+          pIdx: dPIdx,
+          cxCands: cxInHand.map(c => ({ id: c.id, key: c.key, name: c.def.name }))
+        };
+        return s; // 等玩家決定後再繼續（handler 結束後呼叫 processAmbush）
+      }
+      // NPC：不發動（戰略複雜，略過）
+    }
+  }
   // 收集所有伏兵·霞的位置
   const ambushSlots = [];
   D.stage.forEach((c, i) => {
     if (c && c.def.fx === 'AUTO_OPP_ATKPHASE_TOPCHAR') ambushSlots.push(i);
   });
   if (ambushSlots.length === 0) return s;
-  s.ambushQueue = {
-    pIdx: dPIdx,
-    slots: ambushSlots
-  };
+  s.ambushQueue = { pIdx: dPIdx, slots: ambushSlots };
   return processAmbush(s);
 }
 function processAmbush(s) {
@@ -2853,6 +3281,7 @@ function processEncore(s) {
         card.state = 'stand';
         P.wr.push(card);
         s.log.push(`${card.def.name} 落控室（無法Encore）。`);
+        s = applyLeaveStage(s, pIdx, card);
         movedAny = true;
       }
     }
@@ -2877,6 +3306,8 @@ function processEncore(s) {
       card.state = 'stand';
       P.wr.push(card);
       s.log.push(`${card.def.name} 落控室。`);
+      s = applyLeaveStage(s, pIdx, card);
+      if (s.pending) return s;
       return processEncore(s);
     }
   }
@@ -2903,7 +3334,7 @@ function finalizeEncore(s) {
         const cand = selfEncoreCandidates(P, se)[0];
         const di = P.hand.findIndex(c => c.id === cand.id);
         P.wr.push(P.hand.splice(di, 1)[0]);
-        card.state = 'rest'; card.autoBuff = null;
+        card.state = 'rest';
         s.log.push(`${P.name} 自身 Encore：${card.def.name} 復活。`);
         if (!s.banners) s.banners = [];
         s.banners.push({
@@ -2923,7 +3354,7 @@ function finalizeEncore(s) {
       }
       if (doEncore) {
         for (let i = 0; i < 3; i++) P.wr.push(P.stock.pop());
-        card.state = 'rest'; card.autoBuff = null;
+        card.state = 'rest';
         s.log.push(`${P.name} Encore：${card.def.name} 復活。`);
         if (!s.banners) s.banners = [];
         s.banners.push({
@@ -3047,6 +3478,28 @@ function resolvePending(s, choice) {
             });
           }
         }
+        break;
+      }
+    case 'CHOICE_RECOVER':
+      {
+        if (choice.id) {
+          const idx = P.wr.findIndex(c => c.id === choice.id);
+          if (idx >= 0) {
+            const c = P.wr.splice(idx, 1)[0];
+            P.hand.push(c);
+            s.log.push(`Choice：${c.def.name} 回到手牌。`);
+            if (!s.banners) s.banners = [];
+            s.banners.push({
+              kind: 'recover',
+              title: 'Choice·回收角色',
+              cardKeys: [c.key],
+              confirmBy: 'opp',
+              byPIdx: p.pIdx,
+              big: true
+            });
+          }
+        }
+        s = applyAliceChoiceBuff(s, p.pIdx);
         break;
       }
     case 'GATE':
@@ -3261,6 +3714,8 @@ function resolvePending(s, choice) {
     case 'STEP_LOOK':
       {
         const looked = p.looked || [];
+        const fg = p.filterGensokyo || false;
+        const ad1 = p.afterDiscard1 || false;
         if (choice.look) {
           // 看的牌還在牌組，未上手不爆deck → deferRefresh，避免看牌途中誤洗控室
           const c = pull(s, p.pIdx, true);
@@ -3269,29 +3724,17 @@ function resolvePending(s, choice) {
           }
           // 看滿 max，或牌組已被看光（不能看不存在的牌）→ 進選牌
           if (looked.length >= p.max || P.deck.length === 0) {
-            s.pending = {
-              type: 'STEP_LOOK_PICK',
-              pIdx: p.pIdx,
-              looked
-            };
+            s.pending = { type: 'STEP_LOOK_PICK', pIdx: p.pIdx, looked, filterGensokyo: fg, afterDiscard1: ad1 };
             return s;
           }
-          s.pending = {
-            type: 'STEP_LOOK',
-            pIdx: p.pIdx,
-            looked,
-            max: p.max
-          };
+          s.pending = { type: 'STEP_LOOK', pIdx: p.pIdx, looked, max: p.max, filterGensokyo: fg, afterDiscard1: ad1 };
           return s;
         } else {
           if (looked.length >= 1) {
-            s.pending = {
-              type: 'STEP_LOOK_PICK',
-              pIdx: p.pIdx,
-              looked
-            };
+            s.pending = { type: 'STEP_LOOK_PICK', pIdx: p.pIdx, looked, filterGensokyo: fg, afterDiscard1: ad1 };
             return s;
           }
+          // 0張：若有 afterDiscard1 也跳過（至少1張才棄）
           return s;
         }
       }
@@ -3318,7 +3761,131 @@ function resolvePending(s, choice) {
           looked.forEach(c => P.wr.push(c));
         }
         maybeRefresh(s, p.pIdx); // 所有看的牌去向已定（上手或落控室）→ 補做 deck 歸零檢查
+        // 咲夜②：look結束後棄1張手牌
+        if (p.afterDiscard1 && P.hand.length > 0) {
+          s.pending = { type: 'DISCARD_1', pIdx: p.pIdx };
+          return s;
+        }
         return s;
+      }
+    case 'DISCARD_1':
+      {
+        // 棄1張手牌（通用）
+        if (choice.id) {
+          const idx2 = P.hand.findIndex(c => c.id === choice.id);
+          if (idx2 >= 0) {
+            const dc = P.hand.splice(idx2, 1)[0];
+            P.wr.push(dc);
+            s.log.push(`${P.name} 棄牌：${dc.def.name}。`);
+          }
+        }
+        return s;
+      }
+    // CHARSEL_BUFF：選1隻我方角色 +amount 力量
+    case 'CHARSEL_BUFF':
+      {
+        if (choice.slot != null) {
+          const bc = s.players[p.pIdx].stage[choice.slot];
+          if (bc) {
+            bc.autoBuff = bc.autoBuff || { power: 0, soul: 0 };
+            bc.autoBuff.power += p.amount;
+            s.log.push(`✨ ${p.source}：${bc.def.name} 當回合 +${p.amount}。`);
+          }
+        }
+        // 無論選或跳過，清除 pending，resumeAfterPending 機制自動接 counter（如有）
+        return s;
+      }
+    // OPT_COST_ASK：詢問是否支付可選費用（パチュリー等）
+    case 'OPT_COST_ASK':
+      {
+        if (choice.pay) {
+          // 支付 (1) stock
+          if (P.stock.length >= 1) {
+            P.wr.push(P.stock.pop());
+            s.log.push(`${P.name} 支付 1 費。`);
+          }
+          // 接棄手牌選擇
+          s.pending = { type: 'DISCARD_HAND_FOR_LOOK', pIdx: p.pIdx, slot: p.slot, onPayFx: p.onPayFx, cardName: p.cardName };
+        }
+        // 不支付：直接結束
+        return s;
+      }
+    case 'DISCARD_HAND_FOR_LOOK':
+      {
+        if (choice.id) {
+          const idx2 = P.hand.findIndex(c => c.id === choice.id);
+          if (idx2 >= 0) {
+            const dc = P.hand.splice(idx2, 1)[0];
+            P.wr.push(dc);
+            s.log.push(`${P.name} 棄牌：${dc.def.name}。`);
+          }
+        }
+        // 開始 STEP_LOOK
+        if (p.onPayFx === 'LOOK7_GENSO_SELF1500') {
+          // パチュリー自身 +1500
+          const stageCard = s.players[p.pIdx].stage[p.slot];
+          if (stageCard) {
+            stageCard.autoBuff = stageCard.autoBuff || { power: 0, soul: 0 };
+            stageCard.autoBuff.power += 1500;
+            s.log.push(`✨ ${p.cardName}：當回合 +1500。`);
+          }
+          s.pending = { type: 'STEP_LOOK', pIdx: p.pIdx, looked: [], max: 7, filterGensokyo: true };
+        }
+        return s;
+      }
+    // セプテット②：CX入場後問是否棄舞台角色換看4張
+    case 'SEPTET_CX_COST':
+      {
+        if (choice.pay && choice.costSlot != null) {
+          const costCard = s.players[p.pIdx].stage[choice.costSlot];
+          if (costCard) {
+            s.players[p.pIdx].stage[choice.costSlot] = null;
+            costCard.state = 'stand';
+            s.players[p.pIdx].wr.push(costCard);
+            s.log.push(`セプテット②：${costCard.def.name} 放入控室作為費用。`);
+            s = applyLeaveStage(s, p.pIdx, costCard);
+            if (!s.pending) {
+              s.pending = { type: 'STEP_LOOK', pIdx: p.pIdx, looked: [], max: 4, filterGensokyo: true };
+            }
+          }
+        }
+        // 不論付費與否，繼續進 attack phase
+        if (!s.pending) {
+          triggerOppAtkPhase(s);
+        }
+        return s;
+      }
+    // 早苗②：問是否棄CX選對手角色 +4 soul
+    case 'SANAE_SOUL4_ASK':
+      {
+        if (choice.cxId) {
+          const idx2 = P.hand.findIndex(c => c.id === choice.cxId);
+          if (idx2 >= 0) {
+            P.wr.push(P.hand.splice(idx2, 1)[0]);
+            s.log.push(`早苗②：棄高潮卡，進入選擇對手角色。`);
+            const aPIdx = s.turnPlayer;
+            const oppStage = s.players[aPIdx].stage;
+            const oppCands = [0,1,2,3,4].filter(i => oppStage[i]);
+            if (oppCands.length > 0) {
+              s.pending = { type: 'SANAE_SOUL4_PICK', pIdx: p.pIdx, oppPIdx: aPIdx, cands: oppCands };
+              return s;
+            }
+          }
+        }
+        // 略過或無對手角色：直接進 ambush 流程
+        return triggerAmbushAfterSanae(s, p.pIdx);
+      }
+    case 'SANAE_SOUL4_PICK':
+      {
+        if (choice.slot != null) {
+          const tc = s.players[p.oppPIdx].stage[choice.slot];
+          if (tc) {
+            tc.autoBuff = tc.autoBuff || { power: 0, soul: 0 };
+            tc.autoBuff.soul += 4;
+            s.log.push(`早苗②：${tc.def.name} 當回合魂 +4。`);
+          }
+        }
+        return triggerAmbushAfterSanae(s, p.pIdx);
       }
     case 'ENCORE_ASK':
       {
@@ -3328,7 +3895,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (choice.yes && PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest'; card.autoBuff = null;
+            card.state = 'rest';
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
             s.banners.push({
@@ -3344,8 +3911,10 @@ function resolvePending(s, choice) {
             card.state = 'stand';
             PP.wr.push(card);
             s.log.push(`${card.def.name} 落控室。`);
+            s = applyLeaveStage(s, p.pIdx, card);
           }
         }
+        if (s.pending) return s;
         return processEncore(s);
       }
     case 'TEWI_SELECT':
@@ -3402,7 +3971,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest'; card.autoBuff = null;
+            card.state = 'rest';
             if (p.zeroSrc) { card.justEncored = true; card.zeroDestroying = false; }
             s.log.push(`Encore：${card.def.name} 復活(橫置，付${eCost}錢)。`);
             if (!s.banners) s.banners = [];
@@ -3422,7 +3991,7 @@ function resolvePending(s, choice) {
           const cand = selfEncoreCandidates(PP, se).some(c => c.id === choice.discardId);
           if (di >= 0 && cand) {
             PP.wr.push(PP.hand.splice(di, 1)[0]);
-            card.state = 'rest'; card.autoBuff = null;
+            card.state = 'rest';
             if (p.zeroSrc) { card.justEncored = true; card.zeroDestroying = false; }
             s.log.push(`自身 Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
@@ -3441,6 +4010,7 @@ function resolvePending(s, choice) {
           const sl = PP.stage.indexOf(card);
           if (sl >= 0) PP.stage[sl] = null;
           card.state = 'stand';
+          s = applyLeaveStage(s, p.pIdx, card);
           card.zeroDestroying = false;
           PP.wr.push(card);
           s.log.push(`${card.def.name} 落控室（不發動Encore）。`);
@@ -3456,7 +4026,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest'; card.autoBuff = null;
+            card.state = 'rest';
             if (p.zeroSrc) { card.justEncored = true; card.zeroDestroying = false; }
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
@@ -3496,8 +4066,10 @@ function resolvePending(s, choice) {
               c.state = 'stand';
               PP.wr.push(c);
               s.log.push(`${c.def.name} 落控室。`);
+              s = applyLeaveStage(s, p.pIdx, c);
             }
           });
+          if (s.pending) return s;
           return processEncore(s);
         }
         if (choice.slot != null) {
@@ -3524,7 +4096,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest'; card.autoBuff = null;
+            card.state = 'rest';
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
             if (!s.banners) s.banners = [];
             s.banners.push({
@@ -3590,7 +4162,7 @@ function resolvePending(s, choice) {
           const eCost = encoreCost(s, p.pIdx);
           if (PP.stock.length >= eCost) {
             for (let i = 0; i < eCost; i++) PP.wr.push(PP.stock.pop());
-            card.state = 'rest'; card.autoBuff = null;
+            card.state = 'rest';
             card.justEncored = true;
             card.zeroDestroying = false;
             s.log.push(`Encore：${card.def.name} 復活(橫置)。`);
@@ -3627,7 +4199,6 @@ function resolvePending(s, choice) {
         ctx.mode = choice.side ? 'side' : 'front';
         s.log.push(`⚔️ ${aP.name} 用 ${attacker.def.name} ${ctx.mode === 'side' ? '側面攻擊' : '正面攻擊'}。`);
         s = runAttackFx(s, ctx);
-        if (s.pending) { ctx.resumeAfterPending = 'burn'; return s; }
         return attackBurnStep(s);
       }
     case 'ATK_BURN_ASK':
@@ -3707,11 +4278,6 @@ function resolvePending(s, choice) {
       }
     default:
       break;
-  }
-  // 攻擊效果（如メディスン）零破壞 encore 結算後，接續 burn step
-  if (s.attackCtx && s.attackCtx.resumeAfterPending === 'burn' && !s.pending) {
-    s.attackCtx.resumeAfterPending = null;
-    return attackBurnStep(s);
   }
   // 攻擊流程：trigger 的門/閘 pending 結算後，接續 counter step
   if (s.attackCtx && s.attackCtx.resumeAfterPending === 'counter' && !s.pending) {
@@ -4115,7 +4681,23 @@ const FX_KEYWORD = {
   ATK_TOPCHECK_GENSO_TOHAND: '攻擊·翻頂幻想郷進手',
   ATK_SELF_PX_GENSO1000: '攻擊·自+幻想郷數×1000',
   BATTLE_OPP_REVERSE_MOVE: '戰鬥·倒置對手後移夥伴',
-  CONT_ALLGENSO_LOCK_OPP: '持續·全員幻想郷封對手助太刀'
+  CONT_ALLGENSO_LOCK_OPP: '持續·全員幻想郷封對手助太刀',
+  // L2 第一批
+  ATK_BUFF_ANY_1000: '攻擊·選友軍+1000',
+  ATK_PEEK_BOTH_BOTTOM: '攻擊·看雙方牌庫底',
+  ATK_COND_GENSO2_OPP_LV2_SELF6000: '攻擊·正面lv2且幻想郷≥2則+6000',
+  CIP_BUFF_SELF_1500: '登場·自身+1500',
+  CIP_BUFF_ANY_1500: '登場·選友軍+1500',
+  CIP_MILL2_SELF_GENSO_BUFF: '登場·碌2自+幻想郷×1000',
+  CIP_OPT_LOOK7_GENSO_SELF1500: '登場·可選費看7取幻想郷+1500',
+  LEAVE_LOOK3_GENSO_TAKE_DISCARD1: '離場·看3取幻想郷棄1',
+  SUPPORT_FRONT_FLAT_500: '応援·前方+500',
+  SUPPORT_FRONT_FLAT_1000: '応援·前方+1000',
+  SUPPORT_FRONT_LEVEL500: '応援·前方+lv×500',
+  TRIGGER_GATE_BUFF_GENSO_2000: '觸發·choice觸發幻想郷+2000',
+  ON_CX_PLACED_COST_CHAR_LOOK4_GENSO: '自·CX入場棄角色看4取幻想郷',
+  OPP_ATKPHASE_CX_COST_OPP_SOUL4: '自·對方攻擊開始棄CX選對手+4魂',
+  NO_COLOR_RESTRICTION: '永·無色限制'
 };
 /* ============================================================
    構建卡組（Deck Builder）— WS 版
@@ -5930,7 +6512,15 @@ function SandboxPanel(props) {
     }),
     style: miniBtn('var(--accent)'),
     title: '對手用初始/該系列卡擺一套標準場（等級1+錢1+傷害3+場上5隻L1+控室2CX8角色）'
-  }, '對手default'), e('span', {
+  }, '對手default'), e('button', {
+    onClick: () => act({
+      type: 'SANDBOX_OP',
+      pIdx: 0,
+      op: 'defaultMe'
+    }),
+    style: miniBtn('var(--blue)'),
+    title: '我方設定等級區1張、錢10張、時計3張（手牌/場/控室/牌庫不變）'
+  }, '我方default'), e('span', {
     style: {
       ...lbl,
       marginLeft: 10
