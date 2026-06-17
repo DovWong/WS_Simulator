@@ -45,7 +45,7 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 - DEFS 是卡定義字典。每張卡：{name,type('CHAR'|'CX'),rarity,作品,color,level,cost,power,soul,trig,tsoul?,traits[],fx?,fxList?,text?,selfEncore?}
 - 卡**實例**：{id,key,def,state('stand'|'rest'|'reverse'),traitsAdd[],autoBuff?,justEncored?,zeroDestroying?}。
   注意：在 **CardFace 內 `c = card.def`，所以要用 `c.fx`/`c.fxList`，不是 `c.def.fx`**（這個踩過坑）。
-- `作品`：'初始'（14 張舊卡）或 '東方Project'（已導入 10 張）。WS 不能混作品。
+- `作品`：'初始'（14 張舊卡）或 '東方Project'（已導入 20 張）。WS 不能混作品。
 
 ## 多能力機制（重要基建）
 - **fxList 陣列**：一張卡多能力時用它（取代單一 fx）。continuousFromStage、runAttackFx、CardFace 縮寫都檢查 `fxList || [fx]`。
@@ -56,7 +56,7 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 
 ## 已實作功能（全部已測）
 - 構建卡組、選卡流程（NPC/雙人/連線）、沙盒測試模式（雙方 human）。
-- 東方卡 10 張：純香草4 + 文/てゐ/にとり/メディスン/こいし/妹紅（附帶效果已實作）。
+- 東方卡 20 張：純香草4 + 文/てゐ/にとり/メディスン/こいし/妹紅（附帶效果已實作）＋ L2 第一批10張（マミゾウ/レミリア/妖夢/咲夜/アリス/ミスティア/早苗/椛/セプテット/パチュリー）。
 - 東方卡譯文已全部對 CSV 原文校過。
 
 ## 近期完成（這幾輪）
@@ -65,52 +65,42 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 3. **力量歸零破壞**（ZERO_ENCORE_SELECT）：任何 state（含本來就 reverse/rest）力量<=0 立即破壞；多隻同時歸零像 encore 高亮逐隻選；人類問 encore，NPC 一律落控室。復活角色設 justEncored 當回合不再被重複破壞。用 zeroDestroying 標記破壞流程中的卡。
 4. **翻頂判定兩段式 banner**：メディスン/にとり 發動時，中心先顯示「公開牌庫頂+第1張卡」停1秒，再顯示「發動成功（含效果）/失敗」（pushReveal helper，kind:'reveal'）。
 5. **效果縮寫修正**：CardFace 的 _fxArr 之前誤用 c.def.fxList（c 已是 def），改 c.fxList/c.fx，縮寫恢復顯示。
-6. **戰鬥前破壞**：attackBattleStep 開頭若攻擊對象 calcPower<=0 則直接破壞、跳過戰鬥（雛形，待整合進下面的時序重構）。
+6. **攻擊時序重構**（✅ 已完成並測試）：見下方已完成段落。
+7. **L2 第一批 10 張**（✅ 已完成並測試，commit e3a1f39）：マミゾウ ATK_BUFF_ANY_1000、レミリア SUPPORT_FRONT_FLAT_500、妖夢 CIP_BUFF_ANY_1500、咲夜 CIP_BUFF_SELF_1500＋LEAVE_LOOK3_GENSO_TAKE_DISCARD1、アリス SUPPORT_FRONT_LEVEL500＋TRIGGER_GATE_BUFF_GENSO_2000、ミスティア NO_COLOR_RESTRICTION＋CONT_SELF_GENSO2_P2000＋ATK_COND_GENSO2_OPP_LV2_SELF6000、早苗 SUPPORT_FRONT_FLAT_1000＋OPP_ATKPHASE_CX_COST_OPP_SOUL4、椛 ATK_PEEK_BOTH_BOTTOM＋ATK_SELF_PX_GENSO1000、セプテット CIP_MILL2_SELF_GENSO_BUFF＋ON_CX_PLACED_COST_CHAR_LOOK4_GENSO、パチュリー CIP_OPT_LOOK7_GENSO_SELF1500。新增 pending 類型：CHARSEL_BUFF、OPT_COST_ASK、DISCARD_HAND_FOR_LOOK、DISCARD_1、SEPTET_CX_COST、SANAE_SOUL4_ASK/PICK。leaveStage hook 補接所有退場路徑。
 
-## ★★ 待辦：攻擊時序重構（J 已確認設計，Project 第一件事）
+## ★★ 攻擊時序重構（✅ 已完成）
 
-### 正確的標準時序（正面攻擊）
+### 實作摘要
+- **gameReducer** 移除全域 checkZeroPowerDestroy wrapper，改為綁在破壞源。
+- **runAttackFx**（メディスン等減力）尾端明確呼叫 checkZeroPowerDestroy；三個呼叫點加 `resumeAfterPending='burn'` 中斷機制。
+- **checkZeroPowerDestroy** 尾端加 resumeAfterPending 恢復邏輯（burn/counter/battle），修正 encore handler 用 return 繞過 resolvePending resume 區的問題。
+- **battleVoided 旗標**：checkZeroPowerDestroy 標記 zeroDestroying 時，若命中 attackCtx 攻/守位置就設 `ctx.battleVoided = true`；attackBattleStep 看到旗標跳過戰鬥（規則 7.6.1.3）。
+- **假倒置不觸發「倒置時」效果**：battleVoided 跳過整個 battle block，defenderReversed/recordTewi 等觸發路徑自然不被假倒置命中。
+- **encore 復活清 autoBuff**：8 處 encore 復活點加 `card.autoBuff = null`，復活角色視為新角色，前效果不殘留。
+- **開發守則（重要）**：日後新增減力/破壞效果，寫完記得 call 一次 `checkZeroPowerDestroy(s)`。
+
+### 正確的攻擊標準時序（正面攻擊，已實作）
 1. 宣言攻擊
-2. 攻擊宣言時效果（公開卡組面、減攻擊力等「攻擊時」效果）
-3. **Trigger（翻頂 trigger check）**
-4. **Counter step（反擊階段）**（標準：Trigger→Counter，要確認現碼順序）
+2. 攻擊宣言時效果（runAttackFx：翻頂/減力等）→ 若有角色歸零立即破壞+encore → 才進 Trigger
+3. Trigger（翻頂 trigger check）
+4. Counter step（正面攻擊必到，防守方一次只能打一張）
 5. 傷害結算
-6. 戰鬥（battle：比力量、倒置）
-7. 戰鬥後的正式 encore phase
+6. 戰鬥（比力量；攻/守角色有「變動」→ 不發生）
+7. 戰鬥後 encore phase
 
-### 「力量歸零破壞 + encore」是隨時觸發的『規則處理』，不固定步驟
-- **準則：任何「會導致角色進控室」的效果**（減力到<=0、直接破壞、反擊 event 的破壞/減力），
-  在它發動、效果結算完的**當下**，自己接一次 checkZeroPowerDestroy(s)。處理完（落控室→問encore→encore完）才繼續原本步驟。
-- 例：攻擊時減力（メディスン）→ 力量<=0 → 立刻破壞+encore → 才進 Trigger。
-- 例：counter step 防守方用反擊 event 把我方角色打進控室 → **傷害結算前**立刻破壞+encore。
+### 規則要點（已實作，供未來新卡參考）
+- checkZeroPowerDestroy 開頭有 `if(s.pending) return`；減力通常同步，直接 call 無問題。
+- counter 卡能否生效 = 看卡自身效果文字有無合法對象；counter step 不做分流。
+- 破壞/encore 後 battleVoided=true → counter step 仍進行，但 battle 跳過。
 
-### J 拍板的實作方向（取代「每步都檢查」）
-- **不要**在攻擊鏈每步都插檢查（浪費，多數時候無減力效果）。
-- **改為綁在「破壞源」上**：每個減力/破壞效果尾端**明確呼叫一次** checkZeroPowerDestroy(s)。
-- 因此要：
-  1. **移除** gameReducer wrapper 那個「每個 action 後都跑 checkZeroPowerDestroy」的全域檢查（現在 gameReducer→gameReducerInner 的包裝）。
-  2. メディスン 等減力效果尾端改為**明確呼叫** checkZeroPowerDestroy。
-  3. 未來新增減力/破壞卡的開發守則：**寫完減力/破壞，記得 call 一次 checkZeroPowerDestroy**。
-- 留意：checkZeroPowerDestroy 開頭有 `if(s.pending) return`，若減力效果本身設了 pending 會被擋；減力通常同步，個案處理。
-
-### A. 假倒置不可觸發任何「倒置時」效果（重要）
-- 力量歸零的「破壞」**實際規則是直接落控室，不是倒置**。為複用 encore UI 保留 reverse 外觀 OK，
-  但這個假倒置**絕不能觸發任何倒置相關效果**：
-  - 我方「使對方倒置」的 CX 連動（CXC_DOOR_REVERSE_RECOVER 紅蓮回收、BLUE3_PACKAGE 藍閘再攻）
-  - てゐ「戰鬥對手被倒置時」（BATTLE_OPP_REVERSE_MOVE）
-  - 其他「被倒置時發動」的卡
-- 實作提示：這些觸發目前綁在 attackBattleStep 的 defenderReversed/recordTewi。力量歸零設的 reverse
-  要與「戰鬥造成的 reverse」區分（已有 zeroDestroying 標記可用），確保不進這些觸發路徑。
-
-### B. 戰鬥是否發生 + counter 對象判定
-- **攻擊方或防守方角色有「變動」（位置/存在改變，含 encore 復活後算「不同角色」）→ 戰鬥不發生。**
-- 宣言正面攻擊 → 防守方**一定有反擊階段**（counter step 必到）。
-- 戰鬥沒發生時（風CX BLUE3_LOOK3_BURN／防守方角色變動等）：
-  - counter 若**指定「被正面攻擊的角色」或「正在戰鬥的角色」**為對象 → 找不到對象、**無法發動**。
-  - counter **沒指定對象**（有其他可生效對象）→ **可以發動**。
-- 實作提示：破壞/encore 發生時設一個「角色變動」旗標（如 ctx.battleVoided 或 attacker/defender 上的旗標），
-  attackBattleStep 看到就跳過戰鬥傷害判定。counter step 的對象解析要依「是否指定戰鬥/正面攻擊對象」分流。
-  **這段精細規則照 J 上傳的 WS 規則原文實作，勿猜。**
+### B. 戰鬥是否發生 + counter 對象判定（照官方規則 7.3–7.6，已實作）
+- 正面攻擊 → counter step **必到**（規則 7.3.1.3），不因角色變動取消。
+- 防守方一次 play timing，只能打**一張** event 或 counter 能力（7.4.1.2.2）。
+- counter 卡能否生效 = 看**該卡自身效果文字**有無合法對象；counter step 不做「指定/不指定對象」分流。
+  - 例：COUNTER_INITIAL_P1500 效果文字指定「初始角色」，若交戰防守者不存在或非初始 → 無合法對象 → 無法發動。
+- **攻擊或防守角色被破壞（規則 7.6.1.3）→ 戰鬥不發生**：用 `ctx.battleVoided` 旗標，attackBattleStep 看到跳過。
+  - 旗標在 checkZeroPowerDestroy 內，標記 zeroDestroying 時若命中 attackCtx 的攻/守位置就設 true。
+- ~~舊版「指定被正面攻擊角色 vs 不指定對象」分流~~ → 此為猜測，規則裡沒有，**已捨棄**。
 
 ## 互動 pending 模式速查
 - TEWI_SELECT（戰場高亮選夥伴→確認）、ENCORE_SELECT（戰場高亮reverse→點選）、
@@ -152,10 +142,11 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 
 ## 卡片難度分級（J 用來決定做哪批）
 L0純香草4、L1純被動2、L2簡單加力29、L3已有框架22、L4單一新動作45、L4?17、L5最難35、Event6、CX52。
-- **L2 第一批建議**：マミゾウ P02、妖夢 P10、咲夜 T15、レミリア P07、アリス T09、
-  早苗 036、ミスティア 021、椛 044、セプテット 065、パチュリー 080。動手前先把 fx 設計用文字給 J 過目。
+- **L2 第一批（✅ 已完成）**：マミゾウ P02、妖夢 P10、咲夜 T15、レミリア P07、アリス T09、
+  早苗 036、ミスティア 021、椛 044、セプテット 065、パチュリー 080。
 
 ## 其他已知待辦
+- **早苗③ ACT 進化**：目標卡「信仰は儚き人間の為に 早苗」尚未加入 DEFS；需先加卡，再實作 ACT_LV3_SWAP_SANAE_FAITH handler（同狀態規則）。
 - T16 伊吹萃香「同名可放任意張數」=改組牌規則，需改 deck-builder 驗證，單獨處理。
 - CX 整批（52張）尚未導入；にとり 要 choice-CX 才能完整測。
 - 連線網路層沒實機測過，只驗了握手邏輯與組局。
