@@ -675,7 +675,7 @@ const DEFS = {
     trig: TRIG.BOOK,
     cont: 'ALL_P1000_S1',
     fx: null,
-    text: '【自】觸發時，抽 1 張牌。（全體 +1000 力量 +1 魂）'
+    text: '【永】全體角色 +1000 力量、+1 魂。（觸發時，抽 1 張牌）'
   },
 
   // 058 疾風「風神少女」 ─ DSOUL CX（2 双魂），置場時選控室 ≤Lv1 角色入錢，全體+1魂
@@ -684,9 +684,9 @@ const DEFS = {
     type: 'CX', rarity: 'CR', 作品: '東方Project',
     color: 'green', level: 0, cost: 0, power: 0, soul: 1,
     trig: TRIG.DSOUL,
-    cont: 'ALL_S1',
+    cont: null,
     fx: 'CX_ON_PLAY_WR_L1MINUS_STOCK',
-    text: '【永】全體角色 +1 魂。【自】此牌出場時，可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。'
+    text: '【自】此牌出場時，全體我方角色 +1 魂。可從控室選 1 隻等級 ≤ 1 的角色，放入錢區。'
   }
 };
 
@@ -875,6 +875,9 @@ function makeSandboxState(names, work) {
     P.cx = [];
     P.resolution = [];
     P.deck = shuffle(buildDeck(deckList.length ? deckList : null));
+    // 預設等級1：從牌庫取1張非CX放入等級區
+    const lvIdx = P.deck.findIndex(c => c.def && c.def.type !== 'CX');
+    if (lvIdx >= 0) P.level.push(P.deck.splice(lvIdx, 1)[0]);
   });
   s.phase = 'main';
   s.turnPlayer = 0;
@@ -1456,9 +1459,13 @@ function gameReducerInner(state, action) {
         if (!s.pending && (card.def.fxList || (card.def.fx ? [card.def.fx] : [])).includes('CX_ON_PLAY_SWITCH')) {
           s = doSwitch(s, s.turnPlayer, card);
         }
-        // CX_ON_PLAY_WR_L1MINUS_STOCK（058 疾風「風神少女」）：出場時選控室≤Lv1角色入錢，全體+1魂
+        // CX_ON_PLAY_WR_L1MINUS_STOCK（058 疾風「風神少女」）：出場時全體+1魂，並可選控室≤Lv1角色入錢
         if (!s.pending && (card.def.fxList || (card.def.fx ? [card.def.fx] : [])).includes('CX_ON_PLAY_WR_L1MINUS_STOCK')) {
           const _P = s.players[s.turnPlayer];
+          // 自效果：出場即刻全體+1魂
+          for (let i = 0; i < 5; i++) { if (_P.stage[i]) { _P.stage[i].autoBuff = _P.stage[i].autoBuff || {power:0,soul:0}; _P.stage[i].autoBuff.soul += 1; } }
+          s.log.push(`${card.def.name}：全體角色 +1 魂。`);
+          // 可選：控室≤Lv1角色入錢
           const cands = _P.wr.filter(c => c.def.type === 'CHAR' && c.def.level <= 1);
           if (cands.length > 0) {
             if (isHuman(s, s.turnPlayer)) {
@@ -1467,8 +1474,7 @@ function gameReducerInner(state, action) {
               const pick = cands[0];
               const wi = _P.wr.findIndex(c => c.id === pick.id);
               _P.wr.splice(wi, 1); _P.stock.push(pick);
-              s.log.push(`${card.def.name}：${pick.def.name} 入錢區，全體+1魂。`);
-              for (let i = 0; i < 5; i++) { if (_P.stage[i]) { _P.stage[i].autoBuff = _P.stage[i].autoBuff || {power:0,soul:0}; _P.stage[i].autoBuff.soul += 1; } }
+              s.log.push(`${card.def.name}：${pick.def.name} 入錢區。`);
             }
           }
         }

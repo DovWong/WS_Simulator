@@ -5,7 +5,7 @@ const R=(s,a)=>m.gameReducer(s,a);
 let s=m.makeSandboxState();
 assert('sandbox: flag set', s.sandbox===true);
 assert('sandbox: hands/stage empty', s.players[0].hand.length===0 && s.players[0].stage.every(x=>x===null));
-assert('sandbox: deck filled (50)', s.players[0].deck.length===50);
+assert('sandbox: deck filled (50)', s.players[0].deck.length + s.players[0].level.length === 50);
 
 // place a card on stage
 s=R(s,{type:'SANDBOX_OP',op:'placeStage',pIdx:0,slot:0,key:'s_1000_concentrate',state:'stand'});
@@ -46,7 +46,7 @@ assert('clearZone clock', s.players[0].clock.length===0);
 
 // reset
 s=R(s,{type:'SANDBOX_OP',op:'reset'});
-assert('reset returns fresh sandbox', s.sandbox===true && s.players[0].hand.length===0 && s.players[0].level.length===0);
+assert('reset returns fresh sandbox', s.sandbox===true && s.players[0].hand.length===0 && s.players[0].level.length===1);
 
 // integration: place concentrate on stage, level 0, deck known, stock 1, run concentrate
 {
