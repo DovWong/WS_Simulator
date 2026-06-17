@@ -945,6 +945,21 @@ const DEFS = {
     traits: ['幻想郷', '紅魔館'],
     fx: 'CIP_OPT_LOOK7_GENSO_SELF1500',
     text: '【自】 ［(1) 棄 1 張手牌］ 這張卡從手牌放上舞台時，可選擇支付：看牌庫頂最多 7 張，可選 1 張《幻想郷》角色展示後加入手牌，其餘進控室；當回合 +1500 力量。'
+  },
+  // ===== 東方Project CX =====
+  thp_cx_standby_hakurei: {
+    name: '博麗の巫女',
+    type: 'CX',
+    rarity: 'CR',
+    作品: '東方Project',
+    color: 'red',
+    level: 0,
+    cost: 0,
+    power: 0,
+    soul: 1,
+    trig: TRIG.STANDBY,
+    cont: 'ALL_P1000_S1',
+    text: '【永】全體角色 +1000 力量、+1 魂。（門觸發：可從控室選 1 張角色加入手牌）'
   }
 };
 
@@ -2280,6 +2295,13 @@ function applyCIP(s, pIdx, slot, card) {
     if (sflip.length > 0) {
       if (!s.banners) s.banners = [];
       s.banners.push({
+        kind: 'reveal',
+        title: `${card.def.name} 出場`,
+        cardKeys: [card.key],
+        dur: 1000,
+        byPIdx: pIdx
+      });
+      s.banners.push({
         kind: 'flip',
         stagingTitle: '偵察兵·碌2',
         title: anyCX ? '碌中CX，橫置' : '碌2完成',
@@ -2378,6 +2400,13 @@ function applyCIP(s, pIdx, slot, card) {
     s.log.push(`🔴 ${card.def.name}：碌${milled.length}張，其中${gensoN}隻幻想郷，當回合 +${gensoN*1000}。`);
     if (milled.length > 0) {
       if (!s.banners) s.banners = [];
+      s.banners.push({
+        kind: 'reveal',
+        title: `${card.def.name} 出場`,
+        cardKeys: [card.key],
+        dur: 1000,
+        byPIdx: pIdx
+      });
       s.banners.push({
         kind: 'flip',
         stagingTitle: `${card.def.name}·碌2`,
@@ -9198,6 +9227,13 @@ function Game({
       }
       return;
     }
+    // CHARSEL_BUFF：直接點擊高亮角色加力（不彈窗）
+    if (state.pending && state.pending.type === 'CHARSEL_BUFF' && (state.pending.pIdx === myIdx || state.sandbox)) {
+      if (state.pending.cand && state.pending.cand.includes(slot)) {
+        act({ type: 'RESOLVE_PENDING', choice: { slot } });
+      }
+      return;
+    }
     if (!yourTurn) return;
 
     // attack phase：點前列直立角色攻擊
@@ -9612,12 +9648,12 @@ function Game({
   }, "\u25E4 ", opp.name, " \xB7\u624B", opp.hand.length, " \u25E5"), /*#__PURE__*/React.createElement(StageRow, {
     state: state,
     pIdx: oppIdx,
-    onSlotClick: state.sandbox && state.pending && (state.pending.type === 'TEWI_SELECT' || state.pending.type === 'ZERO_ENCORE_SELECT') && state.pending.pIdx === oppIdx ? onSlotClick : () => {},
+    onSlotClick: state.sandbox && state.pending && (state.pending.type === 'TEWI_SELECT' || state.pending.type === 'ZERO_ENCORE_SELECT' || state.pending.type === 'CHARSEL_BUFF') && state.pending.pIdx === oppIdx ? onSlotClick : () => {},
     sel: null,
     flip: true,
     onInfo: setInfoCard,
     fill: true,
-    highlightSlots: state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : null) || null,
+    highlightSlots: state.sandbox && state.pending && state.pending.pIdx === oppIdx && (state.pending.type === 'TEWI_SELECT' ? state.pending.cand : state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending.type === 'CHARSEL_BUFF' ? state.pending.cand : null) || null,
     selStage: state.sandbox && state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === oppIdx ? tewiSel : null
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9631,7 +9667,7 @@ function Game({
     sel: sel,
     onInfo: setInfoCard,
     fill: true,
-    highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : null,
+    highlightSlots: state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'AMBUSH_MOVE' ? FRONT.filter(i => me.stage[i] === null) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' ? [0, 1, 2, 3, 4].filter(i => me.stage[i] && hasTrait(me.stage[i], '初始')) : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ZERO_ENCORE_SELECT' ? state.pending.slots : state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? state.pending.cand : state.pending && state.pending.type === 'CHARSEL_BUFF' && state.pending.pIdx === myIdx ? state.pending.cand : null,
     selStage: state.pending && state.pending.type === 'TEWI_SELECT' && state.pending.pIdx === myIdx ? tewiSel : selStage
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9682,7 +9718,7 @@ function Game({
     kind: "deck",
     P: me,
     zoneRef: el => registerZone('deck' + myIdx, el)
-  }))), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && !modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && /*#__PURE__*/React.createElement(PendingModal, {
+  }))), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && !modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && /*#__PURE__*/React.createElement(PendingModal, {
     state: state,
     myIdx: myIdx,
     act: a => {
@@ -9690,7 +9726,7 @@ function Game({
       act(a);
     },
     onHide: () => setModalHidden(true)
-  }), state.pending && state.pending.pIdx === myIdx && modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && /*#__PURE__*/React.createElement("button", {
+  }), state.pending && state.pending.pIdx === myIdx && modalHidden && state.pending.type !== 'AMBUSH_SELECT' && state.pending.type !== 'AMBUSH_MOVE' && state.pending.type !== 'ATK_COUNTER_TARGET' && state.pending.type !== 'ENCORE_SELECT' && state.pending.type !== 'TEWI_SELECT' && state.pending.type !== 'ZERO_ENCORE_SELECT' && state.pending.type !== 'CHARSEL_BUFF' && /*#__PURE__*/React.createElement("button", {
     onClick: () => setModalHidden(false),
     style: {
       position: 'fixed',
@@ -9772,7 +9808,28 @@ function Game({
       padding: '6px 14px',
       fontSize: 13
     }
-  }, "\u4E0D\u79FB\u52D5")), state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' && /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0D\u79FB\u52D5")), state.pending && (state.pending.pIdx === myIdx || state.sandbox) && state.pending.type === 'CHARSEL_BUFF' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      bottom: 16,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 48,
+      background: 'var(--panel)',
+      border: '1px solid var(--accent)',
+      borderRadius: 10,
+      padding: '10px 18px',
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      boxShadow: '0 4px 20px rgba(0,0,0,.5)'
+    }
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14 } },
+    state.pending.source, '\uFF1A\u9EDE', /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent)' } }, '\u9AD8\u4EAE'), '\u7684\u89D2\u8272\uFF0C\u7576\u56DE\u5408 +', state.pending.amount, ' \u529B\u91CF'
+  ), /*#__PURE__*/React.createElement("button", {
+    onClick: () => act({ type: 'RESOLVE_PENDING', choice: {} }),
+    style: { ...btnStyle('var(--line)'), padding: '6px 14px', fontSize: 13 }
+  }, '\u8DF3\u904E')), state.pending && state.pending.pIdx === myIdx && state.pending.type === 'ATK_COUNTER_TARGET' && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'fixed',
       bottom: 16,
@@ -10922,9 +10979,9 @@ function PendingModal({
     // 棄1張手牌
     title = p.type === 'DISCARD_HAND_FOR_LOOK' ? `${p.cardName}：選1張手牌棄掉` : '選1張手牌棄掉';
     body = /*#__PURE__*/React.createElement("div", null,
-      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } },
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, maxHeight: '50vh', overflowY: 'auto' } },
         P.hand.map((c2, hi) => /*#__PURE__*/React.createElement("div", { key: c2.id, onClick: () => setSel(hi), style: { outline: sel === hi ? '3px solid var(--red,#e55)' : 'none', borderRadius: 6, cursor: 'pointer' } },
-          /*#__PURE__*/React.createElement(CardFace, { card: c2, fill: true })))
+          /*#__PURE__*/React.createElement(CardFace, { card: c2, hand: true })))
       ),
       /*#__PURE__*/React.createElement("button", { onClick: () => { if (sel != null) { choose({ id: P.hand[sel].id }); setSel(null); } }, disabled: sel == null, style: btnStyle(sel != null ? 'var(--red,#e55)' : 'var(--line)') }, '棄牌確認')
     );

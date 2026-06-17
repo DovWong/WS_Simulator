@@ -45,7 +45,7 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 - DEFS 是卡定義字典。每張卡：{name,type('CHAR'|'CX'),rarity,作品,color,level,cost,power,soul,trig,tsoul?,traits[],fx?,fxList?,text?,selfEncore?}
 - 卡**實例**：{id,key,def,state('stand'|'rest'|'reverse'),traitsAdd[],autoBuff?,justEncored?,zeroDestroying?}。
   注意：在 **CardFace 內 `c = card.def`，所以要用 `c.fx`/`c.fxList`，不是 `c.def.fx`**（這個踩過坑）。
-- `作品`：'初始'（14 張舊卡）或 '東方Project'（已導入 10 張）。WS 不能混作品。
+- `作品`：'初始'（14 張舊卡）或 '東方Project'（已導入 20 張）。WS 不能混作品。
 
 ## 多能力機制（重要基建）
 - **fxList 陣列**：一張卡多能力時用它（取代單一 fx）。continuousFromStage、runAttackFx、CardFace 縮寫都檢查 `fxList || [fx]`。
@@ -56,7 +56,7 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 
 ## 已實作功能（全部已測）
 - 構建卡組、選卡流程（NPC/雙人/連線）、沙盒測試模式（雙方 human）。
-- 東方卡 10 張：純香草4 + 文/てゐ/にとり/メディスン/こいし/妹紅（附帶效果已實作）。
+- 東方卡 20 張：純香草4 + 文/てゐ/にとり/メディスン/こいし/妹紅（附帶效果已實作）＋ L2 第一批10張（マミゾウ/レミリア/妖夢/咲夜/アリス/ミスティア/早苗/椛/セプテット/パチュリー）。
 - 東方卡譯文已全部對 CSV 原文校過。
 
 ## 近期完成（這幾輪）
@@ -66,6 +66,12 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 4. **翻頂判定兩段式 banner**：メディスン/にとり 發動時，中心先顯示「公開牌庫頂+第1張卡」停1秒，再顯示「發動成功（含效果）/失敗」（pushReveal helper，kind:'reveal'）。
 5. **效果縮寫修正**：CardFace 的 _fxArr 之前誤用 c.def.fxList（c 已是 def），改 c.fxList/c.fx，縮寫恢復顯示。
 6. **攻擊時序重構**（✅ 已完成並測試）：見下方已完成段落。
+7. **L2 第一批 10 張**（✅ 已完成並測試，commit e3a1f39）：マミゾウ ATK_BUFF_ANY_1000、レミリア SUPPORT_FRONT_FLAT_500、妖夢 CIP_BUFF_ANY_1500、咲夜 CIP_BUFF_SELF_1500＋LEAVE_LOOK3_GENSO_TAKE_DISCARD1、アリス SUPPORT_FRONT_LEVEL500＋TRIGGER_GATE_BUFF_GENSO_2000、ミスティア NO_COLOR_RESTRICTION＋CONT_SELF_GENSO2_P2000＋ATK_COND_GENSO2_OPP_LV2_SELF6000、早苗 SUPPORT_FRONT_FLAT_1000＋OPP_ATKPHASE_CX_COST_OPP_SOUL4、椛 ATK_PEEK_BOTH_BOTTOM＋ATK_SELF_PX_GENSO1000、セプテット CIP_MILL2_SELF_GENSO_BUFF＋ON_CX_PLACED_COST_CHAR_LOOK4_GENSO、パチュリー CIP_OPT_LOOK7_GENSO_SELF1500。新增 pending 類型：CHARSEL_BUFF、OPT_COST_ASK、DISCARD_HAND_FOR_LOOK、DISCARD_1、SEPTET_CX_COST、SANAE_SOUL4_ASK/PICK。leaveStage hook 補接所有退場路徑。
+8. **UI 演出改版**（本輪）：
+   - 出場碌N 兩段式動畫：CIP_MILL 類效果出場時，先推 `kind:'reveal'` banner 顯示出場卡1秒，再進碌牌翻牌動畫。所有日後的「出場後碌N」效果均應遵循此模式。
+   - CHARSEL_BUFF 改戰場直點：選我方角色加力不再彈 modal，改為高亮候選角色（`highlightSlots`）直接點選，底部浮動條顯示來源+加力量+跳過鈕。日後所有「出場/攻擊時選我方角色加/減力」類效果一律沿用此模式，不得另開 modal。
+   - 東方 門 CX 測試卡已加入（key: `thp_cx_standby_hakurei`，trig: STANDBY，紅色），走現有 `doStandby` 邏輯（控室選角色回手）。
+   - DISCARD_1 / DISCARD_HAND_FOR_LOOK 棄牌選卡視窗改用 `hand: true`（與「選牌加手」同大小），不得再用 `fill: true`。
 
 ## ★★ 攻擊時序重構（✅ 已完成）
 
@@ -105,8 +111,11 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 - TEWI_SELECT（戰場高亮選夥伴→確認）、ENCORE_SELECT（戰場高亮reverse→點選）、
   ZERO_ENCORE_SELECT（力量歸零破壞→高亮→點選，含 zeroSrc 分流回 SELF_ENCORE_ASK/ENCORE_CONFIRM）、
   SELF_ENCORE_ASK（方式一棄牌/方式二付3錢/不發動/取消重選）、ENCORE_CONFIRM（一般角色先確認）。
+  CHARSEL_BUFF（戰場高亮候選角色→直接點選；底部浮動提示含跳過鈕）。
 - modal gate 在 state.sandbox 時用 pending.pIdx（非 myIdx）讓 P1 也能彈窗。
-- TEWI_SELECT / ZERO_ENCORE_SELECT 走戰場高亮（已從 modal gate 排除）。
+- **戰場高亮直點類型**（已從 modal gate 排除，在 `onSlotClick` 內獨立處理）：
+  TEWI_SELECT、ZERO_ENCORE_SELECT、CHARSEL_BUFF。
+  新增此類 pending 時，須同步更新：① onSlotClick 分支 ② myIdx highlightSlots ③ oppIdx highlightSlots (sandbox) ④ oppIdx onSlotClick 條件 ⑤ PendingModal 排除條件×2 ⑥ 底部浮動提示（若需跳過鈕）。
 
 ## 通用機制實作規則（新 session 必讀；遇到新機制請補充此節）
 
@@ -137,15 +146,35 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
 「把此卡放控室，從控室取某卡放回同格子」類效果：
 新角色放入時，**狀態與被替換的卡相同**（stand→stand、rest→rest、reverse→reverse）。
 
+### 出場後碌N banner 兩段式模式
+CIP 類翻牌效果（碌2等）統一用兩段式 banner：
+1. 先推 `{ kind: 'reveal', title: '${card.def.name} 出場', cardKeys: [card.key], dur: 1000, byPIdx: pIdx }` 停1秒
+2. 再推碌牌 `{ kind: 'flip', stagingTitle: '…碌N', ... }` 動畫
+日後所有「出場時碌N」類效果（含未來新卡）均應遵循此順序。
+
+### 選我方角色加/減力（無 modal，戰場直點）
+凡「出場時/攻擊時 選1隻我方角色加減力」類效果，一律用 CHARSEL_BUFF pending：
+```js
+s.pending = { type: 'CHARSEL_BUFF', pIdx, amount, cand: [合法slot陣列], source: card.def.name };
+// 攻擊時需加: ctx.resumeAfterPending = 'counter';
+```
+UI 會自動高亮候選格、底部顯示浮動提示、允許點擊直選或按跳過。
+**不要**另開 modal 或新增 pending 類型；直接複用 CHARSEL_BUFF。
+
+### 棄手牌選牌視窗（DISCARD_1 / DISCARD_HAND_FOR_LOOK）
+棄手牌的選牌一律用 `hand: true` 渲染 CardFace（高度 min(240px,24vh)），與「選牌加手」保持一致大小。
+不得用 `fill: true`（會令卡圖依容器拉伸，出現太扁問題）。
+
 ---
 
 ## 卡片難度分級（J 用來決定做哪批）
 L0純香草4、L1純被動2、L2簡單加力29、L3已有框架22、L4單一新動作45、L4?17、L5最難35、Event6、CX52。
-- **L2 第一批建議**：マミゾウ P02、妖夢 P10、咲夜 T15、レミリア P07、アリス T09、
-  早苗 036、ミスティア 021、椛 044、セプテット 065、パチュリー 080。動手前先把 fx 設計用文字給 J 過目。
+- **L2 第一批（✅ 已完成）**：マミゾウ P02、妖夢 P10、咲夜 T15、レミリア P07、アリス T09、
+  早苗 036、ミスティア 021、椛 044、セプテット 065、パチュリー 080。
 
 ## 其他已知待辦
+- **早苗③ ACT 進化**：目標卡「信仰は儚き人間の為に 早苗」尚未加入 DEFS；需先加卡，再實作 ACT_LV3_SWAP_SANAE_FAITH handler（同狀態規則）。
 - T16 伊吹萃香「同名可放任意張數」=改組牌規則，需改 deck-builder 驗證，單獨處理。
-- CX 整批（52張）尚未導入；にとり 要 choice-CX 才能完整測。
+- CX 整批（52張）尚未導入；にとり 要 choice-CX 才能完整測。已先加入1張東方門CX測試卡（`thp_cx_standby_hakurei`）供 doStandby 測試。
 - 連線網路層沒實機測過，只驗了握手邏輯與組局。
 - test_refresh 的 1叉（deckout）待查。
