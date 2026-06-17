@@ -1157,7 +1157,7 @@ function makeSandboxState(names, work) {
   return s;
 }
 // 沙盒「對手 default 場面」：用指定作品的卡擺一套標準對手場
-//  等級1、錢1、傷害3隨機、場上5隻隨機L1角色、控室10(2CX+8角色)
+//  等級1、錢10、傷害3隨機、場上5隻隨機L1角色、控室10(2CX+8角色)
 function sandboxDefaultOpponent(s, work) {
   work = work || s.sandboxWork || '初始';
   const P = s.players[1];
@@ -1176,12 +1176,14 @@ function sandboxDefaultOpponent(s, work) {
   P.wr = [];
   P.cx = [];
   P.resolution = [];
-  // 等級區1張、錢1張（隨機角色）
+  // 等級區1張、錢10張（隨機角色）
   let c;
   c = mk(pick(chars));
   if (c) P.level.push(c);
-  c = mk(pick(chars));
-  if (c) P.stock.push(c);
+  for (let i = 0; i < 10; i++) {
+    c = mk(pick(chars));
+    if (c) P.stock.push(c);
+  }
   // 傷害區3張隨機
   for (let i = 0; i < 3; i++) {
     c = mk(pick(chars));
@@ -1200,6 +1202,30 @@ function sandboxDefaultOpponent(s, work) {
   for (let i = 0; i < 8; i++) {
     c = mk(pick(chars));
     if (c) P.wr.push(c);
+  }
+  return s;
+}
+// 沙盒「我方 default」：只設等級區1張、錢10張、時計3張，其餘（手牌/場/控室/牌庫）不動
+function sandboxDefaultMe(s, work) {
+  work = work || s.sandboxWork || '初始';
+  const P = s.players[0];
+  const pool = Object.keys(DEFS).filter(k => (DEFS[k]['作品'] || '初始') === work);
+  const chars = pool.filter(k => DEFS[k].type === 'CHAR');
+  const pick = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+  const mk = k => k ? mkCard(k, 'stand') : null;
+  P.level = [];
+  P.stock = [];
+  P.clock = [];
+  let c;
+  c = mk(pick(chars));
+  if (c) P.level.push(c);
+  for (let i = 0; i < 10; i++) {
+    c = mk(pick(chars));
+    if (c) P.stock.push(c);
+  }
+  for (let i = 0; i < 3; i++) {
+    c = mk(pick(chars));
+    if (c) P.clock.push(c);
   }
   return s;
 }
@@ -1458,6 +1484,8 @@ function gameReducerInner(state, action) {
           P.deck = shuffle(buildDeck(dl.length ? dl : null));
         } else if (op === 'defaultOpponent') {
           sandboxDefaultOpponent(s, s.sandboxWork);
+        } else if (op === 'defaultMe') {
+          sandboxDefaultMe(s, s.sandboxWork);
         } else if (op === 'addMany') {
           // 一次加入多張卡到某 zone（多選確定）。action.keys = [key,...]
           (action.keys || []).forEach(k => {
@@ -6797,7 +6825,15 @@ function SandboxPanel(props) {
     }),
     style: miniBtn('var(--accent)'),
     title: '對手用初始/該系列卡擺一套標準場（等級1+錢1+傷害3+場上5隻L1+控室2CX8角色）'
-  }, '對手default'), e('span', {
+  }, '對手default'), e('button', {
+    onClick: () => act({
+      type: 'SANDBOX_OP',
+      pIdx: 0,
+      op: 'defaultMe'
+    }),
+    style: miniBtn('var(--blue)'),
+    title: '我方設定等級區1張、錢10張、時計3張（手牌/場/控室/牌庫不變）'
+  }, '我方default'), e('span', {
     style: {
       ...lbl,
       marginLeft: 10
