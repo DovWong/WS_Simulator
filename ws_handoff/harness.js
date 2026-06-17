@@ -1,7 +1,7 @@
 const React = { createElement: () => ({}) };
 const localStorage = { getItem: () => null, setItem: () => {} };
-const btoa = (s) => Buffer.from(s).toString('base64');
-const atob = (s) => Buffer.from(s, 'base64').toString();
+const btoa = (s) => Buffer.from(s).toString("base64");
+const atob = (s) => Buffer.from(s, "base64").toString();
 
 
 /* ============================================================

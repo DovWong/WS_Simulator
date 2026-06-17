@@ -11290,73 +11290,133 @@ function StageRow({
 }
 function CardLibModal({ testedKeys, onToggle, onImport, onClose }) {
   const e = React.createElement;
-  const works = [...new Set(Object.values(DEFS).map(d => d['作品']))].filter(Boolean);
-  const [filterWork, setFilterWork] = React.useState('');
-  const keys = Object.keys(DEFS);
-  const filtered = keys.filter(k => {
-    const d = DEFS[k];
-    if (filterWork && d['作品'] !== filterWork) return false;
-    return true;
+  const { useState: us } = React;
+  const allWorks = (() => {
+    const ws = [];
+    Object.keys(DEFS).forEach(k => { const w = DEFS[k]['作品'] || '初始'; if (ws.indexOf(w) < 0) ws.push(w); });
+    return ws;
+  })();
+  const [filterWork, setFilterWork] = us('');
+  const [colorSel, setColorSel] = us({});
+  const [lvSel, setLvSel] = us({});
+  const [typeSel, setTypeSel] = us({});
+  const [sortBy, setSortBy] = us('level');
+  const [asc, setAsc] = us(true);
+  const [testedOnly, setTestedOnly] = us(false);
+  const [untestedOnly, setUntestedOnly] = us(false);
+  const [preview, setPreview] = us(null);
+
+  function toggleF(setter) {
+    return key => setter(m => { const n = Object.assign({}, m); if (n[key]) delete n[key]; else n[key] = true; return n; });
+  }
+  const toggleColor = toggleF(setColorSel), toggleLv = toggleF(setLvSel), toggleType = toggleF(setTypeSel);
+
+  function doExport() {
+    const arr = [...testedKeys];
+    const blob = new Blob([JSON.stringify(arr, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'ws-tested-cards.json'; a.click();
+    URL.revokeObjectURL(url);
+  }
+  function doImport() {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+    inp.onchange = ev => {
+      const f = ev.target.files[0]; if (!f) return;
+      const reader = new FileReader();
+      reader.onload = re => { try { const keys = JSON.parse(re.target.result); onImport(keys); } catch(err) { alert('匯入失敗：格式錯誤'); } };
+      reader.readAsText(f);
+    };
+    inp.click();
+  }
+
+  let allCards = Object.keys(DEFS).map(k => Object.assign({ id: k }, DEFS[k]));
+  if (filterWork) allCards = allCards.filter(c => (c['作品'] || '初始') === filterWork);
+  if (Object.keys(colorSel).length) allCards = allCards.filter(c => colorSel[c.color]);
+  if (Object.keys(lvSel).length) allCards = allCards.filter(c => lvSel[String(c.level)]);
+  if (Object.keys(typeSel).length) allCards = allCards.filter(c => typeSel[c.type]);
+  if (testedOnly) allCards = allCards.filter(c => testedKeys.has(c.id));
+  if (untestedOnly) allCards = allCards.filter(c => !testedKeys.has(c.id));
+  const dir = asc ? 1 : -1;
+  const typeRank = { CHAR: 0, EVENT: 1, CX: 2 };
+  allCards.sort((a, b) => {
+    let r = 0;
+    if (sortBy === 'color') r = (a.color || '').localeCompare(b.color || '');
+    else if (sortBy === 'level') r = (a.level || 0) - (b.level || 0);
+    else if (sortBy === 'type') r = (typeRank[a.type] || 0) - (typeRank[b.type] || 0);
+    if (r === 0) r = (a.cost || 0) - (b.cost || 0);
+    return r * dir;
   });
-  const COLOR_LABEL = { red: '紅', blue: '藍', yellow: '黃', green: '綠' };
+
+  function pillRow(label, items, sel, onTog, colorFn) {
+    return e('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
+      e('span', { style: { color: 'var(--ink-dim)', fontSize: 11, width: 40, flexShrink: 0 } }, label),
+      items.map(it => {
+        const key = Array.isArray(it) ? it[0] : it;
+        const text = Array.isArray(it) ? it[1] : it;
+        const on = !!sel[key];
+        const bg = on ? (colorFn ? colorFn(key) : 'var(--accent)') : 'var(--panel)';
+        return e('button', { key, onClick: () => onTog(key), style: { background: bg, color: '#fff', borderRadius: 999, padding: '4px 11px', fontSize: 12, fontWeight: 700, border: '1px solid var(--line)', cursor: 'pointer', fontFamily: 'inherit' } }, text);
+      })
+    );
+  }
+
+  const testedCount = testedKeys.size;
+
   return e('div', {
-    onClick: onClose,
-    style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }
-  }, e('div', {
-    onClick: ev => ev.stopPropagation(),
-    style: { background: 'var(--panel)', borderRadius: 14, border: '1px solid var(--line)', width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+    style: { position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', padding: 12, gap: 7, background: 'var(--bg)', boxSizing: 'border-box', zIndex: 80 }
   },
-    e('div', { style: { padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 } },
-      e('span', { style: { fontWeight: 700, fontSize: 16, flex: 1 } }, '📋 全部卡（' + filtered.length + ' 張）'),
-      e('button', { onClick: doExport, style: { background: 'var(--accent-y,#c8a000)', color: '#000', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700 } }, '匯出 JSON'),
-      e('button', { onClick: doImport, style: { background: 'var(--panel)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' } }, '匯入 JSON'),
-      e('select', {
-        value: filterWork,
-        onChange: ev => setFilterWork(ev.target.value),
-        style: { background: 'var(--bg)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 6, padding: '3px 8px', fontSize: 13 }
-      },
-        e('option', { value: '' }, '全部作品'),
-        works.map(w => e('option', { key: w, value: w }, w))
-      ),
-      e('button', { onClick: onClose, style: { background: 'transparent', color: 'var(--ink-dim)', border: 'none', fontSize: 20, cursor: 'pointer', lineHeight: 1 } }, '✕')
-    ),
-    e('div', { style: { overflowY: 'auto', flex: 1, padding: '6px 8px' } },
-      e('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: 12 } },
-        e('thead', null,
-          e('tr', { style: { color: 'var(--ink-dim)', borderBottom: '1px solid var(--line)' } },
-            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '卡名'),
-            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '類型'),
-            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, 'Lv/費'),
-            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '顏色'),
-            e('th', { style: { textAlign: 'left', padding: '4px 6px' } }, '觸發'),
-            e('th', { style: { textAlign: 'center', padding: '4px 6px' } }, '狀態')
-          )
-        ),
-        e('tbody', null,
-          filtered.map(key => {
-            const d = DEFS[key];
-            const done = testedKeys.has(key);
-            return e('tr', {
-              key,
-              style: { borderBottom: '1px solid rgba(255,255,255,.05)', background: done ? 'rgba(30,180,100,.08)' : 'transparent' }
-            },
-              e('td', { style: { padding: '5px 6px', color: 'var(--ink)', fontWeight: done ? 700 : 400 } }, d.name),
-              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, d.type === 'CX' ? 'CX' : '角色'),
-              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, d.type === 'CX' ? 'CX' : 'L' + d.level + '/C' + d.cost),
-              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, COLOR_LABEL[d.color] || d.color),
-              e('td', { style: { padding: '5px 6px', color: 'var(--ink-dim)' } }, trigName(d.trig)),
-              e('td', { style: { padding: '5px 6px', textAlign: 'center' } },
-                e('button', {
-                  onClick: () => onToggle(key),
-                  style: { background: done ? '#2a9' : 'var(--panel)', color: done ? '#fff' : 'var(--ink-dim)', border: '1px solid ' + (done ? '#2a9' : 'var(--line)'), borderRadius: 6, padding: '2px 8px', fontSize: 11, cursor: 'pointer', fontWeight: done ? 700 : 400 }
-                }, done ? '✓ 已測試' : '標記')
-              )
-            );
-          })
+    // 頂列
+    e('div', { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } },
+      e('button', { onClick: onClose, style: dbBtn('var(--panel)') }, '← 上一頁'),
+      e('h2', { style: { margin: 0, color: 'var(--accent)', fontSize: 18 } }, '📋 全部卡'),
+      e('span', { style: { color: 'var(--ink-dim)', fontSize: 13 } }, '已測試 ' + testedCount + ' / ' + Object.keys(DEFS).length + ' 張'),
+      e('span', { style: { display: 'inline-flex', gap: 4, alignItems: 'center' } },
+        e('span', { style: { color: 'var(--ink-dim)', fontSize: 12 } }, '作品：'),
+        [['', '全部'], ...allWorks.map(w => [w, w])].map(([val, lbl]) =>
+          e('button', { key: val, onClick: () => setFilterWork(val), style: dbBtn(filterWork === val ? 'var(--accent)' : 'var(--panel)') }, lbl)
         )
+      ),
+      e('button', { onClick: doExport, style: dbBtn('var(--accent-y,#c8a000)') }, '匯出 JSON'),
+      e('button', { onClick: doImport, style: dbBtn('var(--panel)') }, '匯入 JSON')
+    ),
+    // 篩選列
+    e('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, background: 'rgba(255,255,255,.02)', padding: '6px 8px', borderRadius: 8 } },
+      pillRow('顏色', ['red','blue','yellow','green'].map(c => [c, WS_COLOR_NAME[c]]), colorSel, toggleColor, k => WS_COLOR_VAR[k]),
+      pillRow('等級', ['0','1','2','3'].map(l => [l, 'L'+l]), lvSel, toggleLv),
+      pillRow('類型', [['CHAR','角色'],['EVENT','Event'],['CX','CX']], typeSel, toggleType),
+      e('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 } },
+        e('span', { style: { color: 'var(--ink-dim)', fontSize: 11 } }, '排序'),
+        [['level','等級'],['color','顏色'],['type','類型']].map(it =>
+          e('button', { key: it[0], onClick: () => setSortBy(it[0]), style: dbBtn(sortBy === it[0] ? 'var(--accent)' : 'var(--panel)') }, it[1])
+        ),
+        e('button', { onClick: () => setAsc(!asc), style: dbBtn('var(--panel)') }, asc ? '↑ 遞增' : '↓ 遞減'),
+        e('button', { onClick: () => { setTestedOnly(!testedOnly); setUntestedOnly(false); }, style: dbBtn(testedOnly ? 'var(--green)' : 'var(--panel)') }, '只看已測試'),
+        e('button', { onClick: () => { setUntestedOnly(!untestedOnly); setTestedOnly(false); }, style: dbBtn(untestedOnly ? 'var(--blue)' : 'var(--panel)') }, '只看未測試'),
+        e('span', { style: { color: 'var(--ink-dim)', fontSize: 11, marginLeft: 'auto' } }, '符合 ' + allCards.length + ' 張')
       )
+    ),
+    // 卡片格
+    e('div', { style: { flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8, alignContent: 'start' } },
+      allCards.map(c => {
+        const done = testedKeys.has(c.id);
+        const col = WS_COLOR_VAR[c.color] || 'var(--line)';
+        return e('div', {
+          key: c.id,
+          onClick: () => onToggle(c.id),
+          style: { display: 'flex', flexDirection: 'column', gap: 5, background: done ? 'rgba(30,180,100,.12)' : 'var(--panel)', borderRadius: 10, padding: 10, borderLeft: '5px solid ' + col, outline: done ? '1px solid #2a9' : 'none', cursor: 'pointer' }
+        },
+          e('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+            e('span', { style: { background: col, color: '#fff', fontWeight: 800, borderRadius: 5, padding: '1px 7px', fontSize: 13 } }, c.type === 'CX' ? 'CX' : 'L' + c.level),
+            e('span', { style: { fontWeight: 800, fontSize: 14, flex: 1 } }, c.name),
+            c.type === 'CHAR' ? e('span', { style: { fontWeight: 800, fontSize: 14, color: col } }, c.power) : null,
+            done ? e('span', { style: { background: '#2a9', color: '#fff', borderRadius: 5, padding: '1px 6px', fontSize: 11, fontWeight: 700, flexShrink: 0 } }, '✓ 已測試') : null
+          ),
+          e('div', { style: { fontSize: 11, color: 'var(--ink-dim)' } }, WS_TYPE_NAME[c.type] + ' · ' + WS_COLOR_NAME[c.color] + ' · ' + c.rarity + (c.type !== 'CX' ? ' · 費' + c.cost : '')),
+          e('div', { style: { fontSize: 12, color: 'var(--ink)', lineHeight: 1.4, minHeight: 28 } }, c.text || e('span', { style: { color: 'var(--ink-dim)' } }, '（無特殊效果）'))
+        );
+      })
     )
-  ));
+  );
 }
 function PendingModal({
   state,
