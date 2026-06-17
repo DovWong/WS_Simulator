@@ -10307,7 +10307,15 @@ function Game({
       fontSize: 12,
       color: 'var(--ink-dim)'
     }
-  }, infoCard.def.type === 'CX' ? 'CX' : `L${infoCard.def.level} ◈${infoCard.def.cost}`)), /*#__PURE__*/React.createElement("div", {
+  }, infoCard.def.type === 'CX' ? 'CX' : `L${infoCard.def.level} ◈${infoCard.def.cost}`)), infoCard.def.type === 'CX' && (() => {
+    const col = COLOR_HEX[infoCard.def.color] || '#888';
+    const dark = infoCard.def.color === 'red' ? '#a82838' : infoCard.def.color === 'blue' ? '#1f5aa8' : infoCard.def.color === 'yellow' ? '#a8841a' : infoCard.def.color === 'green' ? '#1f7a48' : '#555';
+    return /*#__PURE__*/React.createElement("div", {
+      style: { height: 14, borderRadius: 5, margin: '6px 0', background: `repeating-linear-gradient(45deg,${col},${col} 6px,${dark} 6px,${dark} 12px)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }
+    }, /*#__PURE__*/React.createElement("span", { style: { color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: 2, textShadow: '0 1px 2px rgba(0,0,0,.7)' } },
+      'CX · 全體+1000/+1魂' + (infoCard.def.trig === TRIG.STANDBY ? ' · 門' : infoCard.def.trig === TRIG.GATE ? ' · 閘' : infoCard.def.trig === TRIG.CHOICE ? ' · CHOICE' : '')
+    ));
+  })(), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 12,

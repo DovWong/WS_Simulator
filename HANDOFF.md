@@ -72,6 +72,12 @@ thp_buffs 13、l1_secondary 16、cxrecycle 2、look 7、zerodestroy 14、fuzz 50
    - CHARSEL_BUFF 改戰場直點：選我方角色加力不再彈 modal，改為高亮候選角色（`highlightSlots`）直接點選，底部浮動條顯示來源+加力量+跳過鈕。日後所有「出場/攻擊時選我方角色加/減力」類效果一律沿用此模式，不得另開 modal。
    - 東方 門 CX 測試卡已加入（key: `thp_cx_standby_hakurei`，trig: STANDBY，紅色），走現有 `doStandby` 邏輯（控室選角色回手）。
    - DISCARD_1 / DISCARD_HAND_FOR_LOOK 棄牌選卡視窗改用 `hand: true`（與「選牌加手」同大小），不得再用 `fill: true`。
+9. **UI 規範落地**（本輪 v0.2）：
+   - CX 打出加兩步確認（`cxConfirm` state，點選高亮→彈含卡圖 modal→確定才執行）
+   - Deck Builder、遊戲內 infoCard 詳情彈窗均加入 CX 斜紋美術條（見「UI 互動規範·規範3」）
+   - SEPTET_CX_COST 改戰場直點（底部浮動條含卡名+效果摘要）
+   - 沙盒 Default 等級區改3張，等級區+傷害區共6張集齊4色
+   - 版本號更新機制：首頁 vX.Y，每次 push 遞增（目前 v0.2）
 
 ## ★★ 攻擊時序重構（✅ 已完成）
 
@@ -164,6 +170,55 @@ UI 會自動高亮候選格、底部顯示浮動提示、允許點擊直選或�
 ### 棄手牌選牌視窗（DISCARD_1 / DISCARD_HAND_FOR_LOOK）
 棄手牌的選牌一律用 `hand: true` 渲染 CardFace（高度 min(240px,24vh)），與「選牌加手」保持一致大小。
 不得用 `fill: true`（會令卡圖依容器拉伸，出現太扁問題）。
+
+---
+
+## ★★ UI 互動規範（所有新功能必須遵守）
+
+> 這些是 J 確認的設計規範，日後新增任何互動功能時必須遵守，無需 J 重複說明。
+
+### 規範 1：所有用卡操作需兩步確認（點擊 → 高亮 → 確認鍵）
+任何「玩家主動使用一張牌」的操作，**不得點一下就立刻執行**，必須：
+1. 點擊 → 該卡高亮（badge 顯示「確認？」）
+2. 彈出含卡圖的確認 modal，按「確定」才執行；點擊其他地方或按「取消」可反悔
+
+已實作範例：
+- **CX 打出**：`cxConfirm` state（手牌點 CX → 高亮 + badge「確認？」→ modal 顯示卡圖 + 確定/取消）
+- **時計換牌**：`clockConfirm` state（點手牌 → modal 確認）
+
+新增任何「用手牌」操作時，照此模式新增對應 confirm state。
+
+### 規範 2：效果選擇戰場角色 → 高亮場上卡 + 底部浮動條
+凡效果需要「選擇我方或對方舞台上的角色」，一律：
+- 高亮候選格（`highlightSlots`）
+- 底部浮動條說明：**卡名（粗體）+ 效果摘要 + 跳過鈕**（若可略過）
+- **不得另開 modal 彈窗**
+
+已實作範例：CHARSEL_BUFF、SEPTET_CX_COST、TEWI_SELECT。
+
+底部浮動條格式（見 CHARSEL_BUFF / SEPTET_CX_COST 參考）：
+```
+[卡名（顏色粗體）] [效果說明（灰字）] ── 點[高亮]的角色  [跳過]
+```
+
+### 規範 3：CX 卡美術斜紋條（所有顯示 CX 的地方）
+CX 卡**不論在哪個 UI 元件出現**，都必須顯示顏色斜紋條 + 觸發類型標示：
+- **CardFace**（手牌、選牌 modal、banner）：已有，底部 30% 斜紋 + 觸發文字
+- **Deck Builder 卡列表**：細斜紋色帶（height 10px）+ 觸發類型縮寫
+- **遊戲內卡片詳情彈窗（infoCard）**：中寬斜紋條（height 14px）+ 「全體+1000/+1魂·門/閘/CHOICE」
+- 新增任何顯示卡牌的 UI 時，若可能顯示 CX，必須加入此美術條。
+
+斜紋 CSS 模板（`col` = COLOR_HEX 或 WS_COLOR_VAR，`dark` = 對應深色 hex）：
+```js
+const dark = c.color==='red'?'#a82838':c.color==='blue'?'#1f5aa8':c.color==='yellow'?'#a8841a':c.color==='green'?'#1f7a48':'#555';
+background: `repeating-linear-gradient(45deg,${col},${col} 6px,${dark} 6px,${dark} 12px)`
+```
+
+### 規範 4：版本號隨每次 push 遞增
+首頁標題列「對戰模擬器 — 規則引擎原型 vX.Y」，**每次 commit push 前必須遞增版本號**。
+- 目前版本：**v0.2**
+- 遞增規則：小改動 +0.1（v0.2→v0.3）；重大功能 +1.0（v0.X→v1.0）
+- 位置：`ws-sim-offline.html` 全文搜 `對戰模擬器 — 規則引擎原型 v`
 
 ---
 
