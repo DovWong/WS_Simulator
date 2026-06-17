@@ -5808,7 +5808,13 @@ function DeckBuilder(props) {
         fontSize: 14,
         color: col
       }
-    }, c.power) : null), e('div', {
+    }, c.power) : null), c.type === 'CX' && (() => {
+      const dark = c.color === 'red' ? '#a82838' : c.color === 'blue' ? '#1f5aa8' : c.color === 'yellow' ? '#a8841a' : c.color === 'green' ? '#1f7a48' : '#555';
+      return e('div', {
+        style: { height: 10, borderRadius: 4, margin: '3px 0', background: `repeating-linear-gradient(45deg,${col},${col} 5px,${dark} 5px,${dark} 10px)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }
+      }, e('span', { style: { color: '#fff', fontSize: 9, fontWeight: 900, letterSpacing: 2, textShadow: '0 1px 2px rgba(0,0,0,.7)' } },
+        'CX ' + (c.trig === TRIG.STANDBY ? '門' : c.trig === TRIG.GATE ? '閘' : c.trig === TRIG.CHOICE ? 'CHOICE' : '')));
+    })(), e('div', {
       style: {
         fontSize: 11,
         color: 'var(--ink-dim)'

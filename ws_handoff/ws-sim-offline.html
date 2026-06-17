@@ -6182,7 +6182,13 @@ function DeckBuilder(props) {
         fontSize: 14,
         color: col
       }
-    }, c.power) : null), e('div', {
+    }, c.power) : null), c.type === 'CX' && (() => {
+      const dark = c.color === 'red' ? '#a82838' : c.color === 'blue' ? '#1f5aa8' : c.color === 'yellow' ? '#a8841a' : c.color === 'green' ? '#1f7a48' : '#555';
+      return e('div', {
+        style: { height: 10, borderRadius: 4, margin: '3px 0', background: `repeating-linear-gradient(45deg,${col},${col} 5px,${dark} 5px,${dark} 10px)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }
+      }, e('span', { style: { color: '#fff', fontSize: 9, fontWeight: 900, letterSpacing: 2, textShadow: '0 1px 2px rgba(0,0,0,.7)' } },
+        'CX ' + (c.trig === TRIG.STANDBY ? '門' : c.trig === TRIG.GATE ? '閘' : c.trig === TRIG.CHOICE ? 'CHOICE' : '')));
+    })(), e('div', {
       style: {
         fontSize: 11,
         color: 'var(--ink-dim)'
@@ -8051,6 +8057,7 @@ function Game({
   const [modalHidden, setModalHidden] = useState(false); // 暫時收起待回應彈窗以查看盤面
   const [isFs, setIsFs] = useState(false); // 全螢幕
   const [clockConfirm, setClockConfirm] = useState(null); // Clock 棄牌確認 {id}
+  const [cxConfirm, setCxConfirm] = useState(null); // CX 打出確認 {id}
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [confirmEndAtk, setConfirmEndAtk] = useState(false);
   const [hideResult, setHideResult] = useState(false); // 勝負後「回到戰鬥」看盤面
@@ -8998,7 +9005,7 @@ function Game({
         marginBottom: 24
       },
       className: "mono"
-    }, "\u5C0D\u6230\u6A21\u64EC\u5668 \u2014 \u898F\u5247\u5F15\u64CE\u539F\u578B v0.1"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5C0D\u6230\u6A21\u64EC\u5668 \u2014 \u898F\u5247\u5F15\u64CE\u539F\u578B v0.2"), /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 24
       }
@@ -9599,14 +9606,12 @@ function Game({
           setSel(sel === c.id ? null : c.id);
           setSelStage(null);
         } else if (cxPlayable) {
-          act({
-            type: 'PLAY_CX',
-            handId: c.id
-          });
+          setCxConfirm(cxConfirm && cxConfirm.id === c.id ? null : { id: c.id });
         }
       },
       dimmed: sel != null && sel !== c.id || state.phase === 'climax' && !isCX,
-      badge: sel === c.id ? '選中' : cxPlayable ? '可打' : null,
+      badge: sel === c.id ? '選中' : cxConfirm && cxConfirm.id === c.id ? '確認？' : cxPlayable ? '可打' : null,
+      highlight: !!(cxConfirm && cxConfirm.id === c.id),
       onInfo: setInfoCard
     }));
   })), state.phase === 'clock' && yourTurn && !state.pending && /*#__PURE__*/React.createElement("div", {
@@ -10496,6 +10501,26 @@ function Game({
         fontSize: 15
       }
     }, "\u53D6\u6D88"))));
+  })(), cxConfirm && state.phase === 'climax' && me.cx.length === 0 && (() => {
+    const cxCard = me.hand.find(x => x.id === cxConfirm.id);
+    const col = cxCard ? COLOR_HEX[cxCard.def.color] || 'var(--line)' : 'var(--accent)';
+    return /*#__PURE__*/React.createElement("div", {
+      onClick: () => setCxConfirm(null),
+      style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 47, padding: 20 }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: ev => ev.stopPropagation(),
+      style: { background: 'var(--panel)', borderRadius: 14, border: `1px solid ${col}`, padding: 20, maxWidth: 320, boxShadow: 'var(--glow)', textAlign: 'center' }
+    }, /*#__PURE__*/React.createElement("div", { style: { fontWeight: 700, fontSize: 16, marginBottom: 6 } }, '\u78BA\u8A8D\u6253\u51FA CX\uFF1F'),
+    cxCard && /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } }, /*#__PURE__*/React.createElement(CardFace, { card: cxCard, hand: true })),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 10, justifyContent: 'center' } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => { act({ type: 'PLAY_CX', handId: cxConfirm.id }); setCxConfirm(null); },
+        style: { ...btnStyle(col), padding: '8px 24px', fontSize: 15 }
+      }, '\u78BA\u5B9A\u6253\u51FA'),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => setCxConfirm(null),
+        style: { ...btnStyle('var(--line)'), padding: '8px 24px', fontSize: 15 }
+      }, '\u53D6\u6D88'))));
   })(), banner && (() => {
     const allShown = !banner.stagger || staggerCount >= (banner.cardKeys ? banner.cardKeys.length : 0);
     const visKeys = banner.stagger ? (banner.cardKeys || []).slice(0, staggerCount) : banner.cardKeys || [];
